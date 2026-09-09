@@ -202,7 +202,7 @@
 </div>
 
 <script type="module">
-  import { requireAuth, logoutUser, getDashboardStats, formatPeso, formatDateTime, todayString, initMobileSidebar } from './js/app.js';
+  import { requireAuth, onAuthReady, logoutUser, getDashboardStats, formatPeso, formatDateTime, todayString, initMobileSidebar } from './js/app.js';
   import { renderSidebar, renderHeader } from './js/sidebar.js';
 
   requireAuth();
@@ -284,7 +284,7 @@
     }
   }
 
-  loadDashboard();
+  onAuthReady(() => loadDashboard());
 </script>
 </body>
 </html>
