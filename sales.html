@@ -238,7 +238,7 @@
 </div>
 
 <script type="module">
-  import { requireAuth, logoutUser, addSale, getSales, getProducts, showToast, openModal, closeModal, closeModalOnOverlay, formatPeso, formatDateTime, initMobileSidebar } from './js/app.js';
+  import { requireAuth, onAuthReady, logoutUser, addSale, getSales, getProducts, showToast, openModal, closeModal, closeModalOnOverlay, formatPeso, formatDateTime, initMobileSidebar } from './js/app.js';
   import { renderSidebar, renderHeader } from './js/sidebar.js';
 
   requireAuth();
@@ -542,7 +542,7 @@
   document.getElementById('date-filter').addEventListener('change',   () => { currentPage = 1; renderSalesTable(); });
   document.getElementById('clear-date-btn').addEventListener('click', () => { document.getElementById('date-filter').value = ''; currentPage = 1; renderSalesTable(); });
 
-  loadAll();
+  onAuthReady(() => loadAll());
 </script>
 </body>
 </html>
