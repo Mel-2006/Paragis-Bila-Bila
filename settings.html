@@ -441,7 +441,7 @@
 </style>
 
 <script type="module">
-  import { requireAuth, logoutUser, getProfile, updateProfile, changePassword, showToast, initMobileSidebar } from './js/app.js';
+  import { requireAuth, onAuthReady, logoutUser, getProfile, updateProfile, changePassword, showToast, initMobileSidebar } from './js/app.js';
   import { renderSidebar, renderHeader } from './js/sidebar.js';
   import { db } from './js/firebase-config.js';
   import { doc, getDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
@@ -629,10 +629,12 @@
     }
   });
 
-  // Init
-  loadProfile();
-  loadStoreInfo();
-  loadNotifSettings();
+  // Init — wait for auth before Firestore reads
+  onAuthReady(() => {
+    loadProfile();
+    loadStoreInfo();
+    loadNotifSettings();
+  });
 </script>
 </body>
 </html>
