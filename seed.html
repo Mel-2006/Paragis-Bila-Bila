@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Seed Sample Data — Paragis Bila Bila</title>
+  <link rel="stylesheet" href="css/styles.css" />
+  <style>
+    body { display: flex; align-items: center; justify-content: center; min-height: 100vh; background: var(--bg); }
+    .seed-card {
+      background: #fff;
+      border-radius: var(--radius-lg);
+      padding: 40px 36px;
+      max-width: 560px;
+      width: 100%;
+      box-shadow: 0 8px 40px rgba(46,125,50,0.15);
+      border: 1px solid var(--border-green);
+      text-align: center;
+    }
+    .seed-log {
+      background: #1B2E1B;
+      border-radius: var(--radius);
+      padding: 16px 18px;
+      margin-top: 20px;
+      text-align: left;
+      font-family: monospace;
+      font-size: 13px;
+      max-height: 260px;
+      overflow-y: auto;
+      display: none;
+    }
+    .log-line { margin-bottom: 4px; line-height: 1.5; }
+    .log-ok   { color: #81C784; }
+    .log-err  { color: #EF9A9A; }
+    .log-info { color: #90CAF9; }
+  </style>
+</head>
+<body>
+  <div class="seed-card">
+    <div style="font-size:60px; margin-bottom:16px">🌿</div>
+    <h2 style="font-family:'Poppins',sans-serif; font-size:22px; font-weight:800; color:var(--text-dark); margin-bottom:8px">
+      Seed Sample Data
+    </h2>
+    <p style="font-size:14px; color:var(--text-light); margin-bottom:28px; line-height:1.6">
+      This will add <strong>5 sample categories</strong> and <strong>10 sample herbal products</strong>
+      to your Firebase Firestore database so you can start testing the system right away.
+    </p>
+
+    <div style="background:var(--warning-light); border:1px solid #FFE082; border-radius:var(--radius-sm); padding:12px 16px; font-size:13px; color:var(--warning); margin-bottom:24px; text-align:left">
+      ⚠️ <strong>Note:</strong> Run this only once. Running it multiple times will add duplicate entries.
+      Delete this file after seeding.
+    </div>
+
+    <button id="seed-btn" class="btn btn-primary btn-lg" style="width:100%">
+      🚀 Seed Sample Data
+    </button>
+    <button id="go-back-btn" class="btn btn-secondary" style="width:100%; margin-top:10px" onclick="window.location.href='dashboard.html'">
+      ← Back to Dashboard
+    </button>
+
+    <div class="seed-log" id="seed-log"></div>
+  </div>
+
+  <script type="module">
+    import { auth, db } from './js/firebase-config.js';
+    import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+    import {
+      collection, addDoc, serverTimestamp, getDocs, query, limit
+    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+    // Require login
+    onAuthStateChanged(auth, user => {
+      if (!user) window.location.href = 'index.html';
+    });
+
+    const logEl  = document.getElementById('seed-log');
+    const seedBtn = document.getElementById('seed-btn');
+
+    function log(msg, type = 'ok') {
+      logEl.style.display = 'block';
+      const line = document.createElement('div');
+      line.className = `log-line log-${type}`;
+      const icons = { ok: '✅', err: '❌', info: '⏳' };
+      line.textContent = `${icons[type]} ${msg}`;
+      logEl.appendChild(line);
+      logEl.scrollTop = logEl.scrollHeight;
+    }
+
+    // ── SAMPLE CATEGORIES ────────────────────────────────
+    const CATEGORIES = [
+      { name: 'Herbal Medicine',   icon: '🌿', description: 'Traditional Filipino herbal remedies' },
+      { name: 'Herbal Supplement', icon: '💊', description: 'Nutritional and health supplements' },
+      { name: 'Treatment Pack',    icon: '🧴', description: 'Bundled treatment packages' },
+      { name: 'Tincture',          icon: '🧪', description: 'Liquid herbal extracts and tinctures' },
+      { name: 'Others',            icon: '🌱', description: 'Miscellaneous herbal products' },
+    ];
+
+    // ── SAMPLE PRODUCTS ──────────────────────────────────
+    // categoryName will be matched to the seeded category ID
+    const PRODUCTS = [
+      {
+        name: 'Paragis Bila Bila',
+        categoryName: 'Herbal Medicine',
+        price: 75,
+        stock: 50,
+        unit: 'pcs',
+        minStock: 10,
+        description: 'Premium Paragis Bila Bila herbal capsules. Known for its anti-inflammatory and detoxifying properties.',
+        imageUrl: ''
+      },
+      {
+        name: 'Tsaang Gubat',
+        categoryName: 'Herbal Medicine',
+        price: 65,
+        stock: 35,
+        unit: 'pcs',
+        minStock: 8,
+        description: 'Tsaang Gubat tea for digestive health and stomach pain relief.',
+        imageUrl: ''
+      },
+      {
+        name: 'Lagundi',
+        categoryName: 'Herbal Medicine',
+        price: 60,
+        stock: 12,
+        unit: 'bottles',
+        minStock: 10,
+        description: 'Lagundi syrup for cough and colds. DOH-approved herbal medicine.',
+        imageUrl: ''
+      },
+      {
+        name: 'Sambong',
+        categoryName: 'Herbal Medicine',
+        price: 55,
+        stock: 8,
+        unit: 'pcs',
+        minStock: 10,
+        description: 'Sambong tablets for kidney stone dissolution and urinary tract health.',
+        imageUrl: ''
+      },
+      {
+        name: 'Moringa (Malunggay)',
+        categoryName: 'Herbal Supplement',
+        price: 50,
+        stock: 45,
+        unit: 'bottles',
+        minStock: 10,
+        description: 'Moringa capsules rich in vitamins, minerals, and antioxidants.',
+        imageUrl: ''
+      },
+      {
+        name: 'Ampalaya Extract',
+        categoryName: 'Herbal Supplement',
+        price: 70,
+        stock: 20,
+        unit: 'bottles',
+        minStock: 5,
+        description: 'Bitter melon extract for blood sugar management and diabetes support.',
+        imageUrl: ''
+      },
+      {
+        name: 'Akapulko Cream',
+        categoryName: 'Herbal Medicine',
+        price: 85,
+        stock: 3,
+        unit: 'tubes',
+        minStock: 5,
+        description: 'Akapulko antifungal cream for skin infections like ringworm and eczema.',
+        imageUrl: ''
+      },
+      {
+        name: 'Bawang (Garlic) Capsules',
+        categoryName: 'Herbal Supplement',
+        price: 45,
+        stock: 60,
+        unit: 'bottles',
+        minStock: 10,
+        description: 'Garlic capsules for cholesterol management and cardiovascular health.',
+        imageUrl: ''
+      },
+      {
+        name: 'Detox Treatment Pack',
+        categoryName: 'Treatment Pack',
+        price: 250,
+        stock: 15,
+        unit: 'packs',
+        minStock: 5,
+        description: 'Complete detox bundle: Paragis + Sambong + Moringa for full-body cleanse.',
+        imageUrl: ''
+      },
+      {
+        name: 'Ginger Tincture',
+        categoryName: 'Tincture',
+        price: 120,
+        stock: 0,
+        unit: 'bottles',
+        minStock: 5,
+        description: 'Pure ginger liquid extract for nausea, inflammation, and immunity.',
+        imageUrl: ''
+      },
+    ];
+
+    seedBtn.addEventListener('click', async () => {
+      seedBtn.disabled     = true;
+      seedBtn.textContent  = '⏳ Seeding...';
+      logEl.innerHTML      = '';
+      logEl.style.display  = 'block';
+
+      try {
+        // Check if products already exist
+        const existing = await getDocs(query(collection(db, 'products'), limit(1)));
+        if (!existing.empty) {
+          log('Products already exist in the database!', 'err');
+          log('To re-seed, manually delete the products/categories collections in Firebase Console first.', 'info');
+          seedBtn.disabled    = false;
+          seedBtn.textContent = '🚀 Seed Sample Data';
+          return;
+        }
+
+        log('Starting seed process...', 'info');
+
+        // 1. Seed categories
+        const catIdMap = {};
+        log('Adding categories...', 'info');
+        for (const cat of CATEGORIES) {
+          const ref = await addDoc(collection(db, 'categories'), {
+            ...cat, createdAt: serverTimestamp()
+          });
+          catIdMap[cat.name] = ref.id;
+          log(`Category added: ${cat.icon} ${cat.name}`);
+        }
+
+        // 2. Seed products
+        log('Adding products...', 'info');
+        for (const prod of PRODUCTS) {
+          const catId   = catIdMap[prod.categoryName] || '';
+          const catName = prod.categoryName;
+          const { categoryName, ...rest } = prod;
+          await addDoc(collection(db, 'products'), {
+            ...rest,
+            categoryId:   catId,
+            categoryName: catName,
+            createdAt:    serverTimestamp()
+          });
+          log(`Product added: ${prod.name} (₱${prod.price}, stock: ${prod.stock})`);
+        }
+
+        log('─────────────────────────────────', 'info');
+        log(`Done! ${CATEGORIES.length} categories & ${PRODUCTS.length} products seeded.`);
+        log('You can now delete this seed.html file.', 'info');
+
+        seedBtn.textContent  = '✅ Done! Go to Dashboard';
+        seedBtn.disabled     = false;
+        seedBtn.onclick      = () => window.location.href = 'dashboard.html';
+        seedBtn.style.background = 'linear-gradient(135deg, #2E7D32, #388E3C)';
+
+      } catch (err) {
+        log('Error: ' + err.message, 'err');
+        seedBtn.disabled    = false;
+        seedBtn.textContent = '🚀 Retry Seed';
+      }
+    });
+  </script>
+</body>
+</html>

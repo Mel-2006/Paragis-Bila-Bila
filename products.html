@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Products — Paragis Bila Bila</title>
+  <link rel="stylesheet" href="css/styles.css" />
+  <style>
+    .product-thumb {
+      width: 42px; height: 42px;
+      border-radius: var(--radius-sm);
+      object-fit: cover;
+      background: var(--primary-pale);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 20px; border: 1px solid var(--border-green);
+      flex-shrink: 0;
+    }
+    .product-name-cell { display: flex; align-items: center; gap: 12px; }
+    .product-name-text strong { display: block; font-size: 14px; }
+    .product-name-text span   { font-size: 12px; color: var(--text-light); }
+
+    .image-upload-area {
+      border: 2px dashed var(--border-green);
+      border-radius: var(--radius);
+      padding: 28px 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: var(--transition);
+      background: var(--primary-pale);
+      position: relative;
+    }
+    .image-upload-area:hover  { border-color: var(--primary); background: var(--primary-mid); }
+    .image-upload-area input  { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+    .image-upload-area p      { font-size: 13px; color: var(--text-light); margin-top: 8px; }
+    .image-preview            { width: 80px; height: 80px; border-radius: var(--radius); object-fit: cover; margin: 0 auto 8px; display: none; border: 2px solid var(--border-green); }
+  </style>
+</head>
+<body>
+<div class="app-layout">
+  <div id="sidebar-mount"></div>
+  <div class="main-content">
+    <div id="header-mount"></div>
+    <main class="page-body">
+
+      <!-- Filter Bar -->
+      <div class="filter-bar">
+        <div class="search-box">
+          <span class="search-icon">🔍</span>
+          <input type="text" id="search-input" placeholder="Search products..." />
+        </div>
+        <select class="form-select" id="category-filter" style="width:180px">
+          <option value="">All Categories</option>
+        </select>
+        <button class="btn btn-primary" id="add-product-btn">
+          ➕ Add Product
+        </button>
+        <button class="btn btn-secondary" id="seed-sample-btn" title="Load sample herbal products for testing">
+          🌿 Load Sample Data
+        </button>
+      </div>
+
+      <!-- Empty DB Banner (shown when no products AND no categories) -->
+      <div id="empty-db-banner" style="display:none; align-items:center; gap:14px;
+        background:#FFF8E1; border:1px solid #FFE082; border-left:4px solid #F57F17;
+        border-radius:10px; padding:16px 20px; margin-bottom:20px; font-size:14px; color:#E65100;">
+        <span style="font-size:24px">⚠️</span>
+        <div>
+          <strong>Walang data sa database!</strong> — Your Firebase Firestore is empty.<br>
+          <span style="font-size:13px; color:#5D4037">
+            Click <strong>"🌿 Load Sample Data"</strong> to add sample herbal products instantly,
+            or click <strong>"➕ Add Product"</strong> to add manually.
+          </span>
+        </div>
+      </div>
+
+      <!-- Products Table Card -->
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">Product Management</div>
+            <div class="card-subtitle">Manage your herbal medicine products</div>
+          </div>
+          <span class="badge badge-primary" id="product-count">0 Products</span>
+        </div>
+        <div class="table-wrapper">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Product</th>
+                <th>Category</th>
+                <th>Price</th>
+                <th>Stock</th>
+                <th>Min Stock</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="products-tbody">
+              <tr><td colspan="7" class="text-center text-muted" style="padding:40px">
+                <div class="empty-state"><div class="empty-state-icon">🌿</div><h3>No Products Yet</h3><p>Click "Add Product" to get started.</p></div>
+              </td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="pagination">
+          <span class="pagination-info" id="pagination-info">Showing 0 of 0 items</span>
+          <div class="pagination-btns" id="pagination-btns"></div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- ADD / EDIT PRODUCT MODAL -->
+<div class="modal-overlay" id="product-modal">
+  <div class="modal" style="max-width:620px">
+    <div class="modal-header">
+      <h3 class="modal-title" id="modal-title">Add New Product</h3>
+      <button class="modal-close" id="modal-close">✕</button>
+    </div>
+    <div class="modal-body">
+      <form id="product-form" novalidate>
+        <input type="hidden" id="product-id" />
+
+        <!-- Image Upload -->
+        <div class="form-group">
+          <label class="form-label">Product Image</label>
+          <div class="image-upload-area" id="upload-area">
+            <img id="image-preview" class="image-preview" src="" alt="Preview" />
+            <input type="file" id="product-image" accept="image/*" />
+            <div id="upload-placeholder">
+              <div style="font-size:36px">📷</div>
+              <p>Click to upload product image<br><small>PNG, JPG up to 5MB</small></p>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="form-group">
+            <label class="form-label">Product Name <span class="required">*</span></label>
+            <input class="form-control" type="text" id="p-name" placeholder="e.g. Paragis Bila Bila" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Category <span class="required">*</span></label>
+            <select class="form-select" id="p-category" required>
+              <option value="">Select category</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="form-group">
+            <label class="form-label">Price (₱) <span class="required">*</span></label>
+            <input class="form-control" type="number" id="p-price" placeholder="0.00" min="0" step="0.01" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Stock Quantity <span class="required">*</span></label>
+            <input class="form-control" type="number" id="p-stock" placeholder="0" min="0" required />
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="form-group">
+            <label class="form-label">Unit</label>
+            <input class="form-control" type="text" id="p-unit" placeholder="e.g. pcs, kg, bottles" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Min Stock Level</label>
+            <input class="form-control" type="number" id="p-minstock" placeholder="5" min="0" />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Description</label>
+          <textarea class="form-control" id="p-desc" placeholder="Enter product description..." rows="3"></textarea>
+        </div>
+      </form>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" id="cancel-btn">Cancel</button>
+      <button class="btn btn-primary" id="save-product-btn">💾 Save Product</button>
+    </div>
+  </div>
+</div>
+
+<!-- DELETE CONFIRM MODAL -->
+<div class="modal-overlay" id="delete-modal">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-header">
+      <h3 class="modal-title">Delete Product</h3>
+      <button class="modal-close" id="delete-modal-close">✕</button>
+    </div>
+    <div class="modal-body" style="text-align:center; padding:32px 24px">
+      <div style="font-size:52px; margin-bottom:16px">🗑️</div>
+      <p style="font-size:16px; font-weight:600; color:var(--text-dark); margin-bottom:8px">Are you sure?</p>
+      <p style="font-size:14px; color:var(--text-light)">This will permanently delete <strong id="delete-product-name"></strong>. This action cannot be undone.</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" id="delete-cancel-btn">Cancel</button>
+      <button class="btn btn-danger" id="confirm-delete-btn">🗑️ Delete</button>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+  import { requireAuth, logoutUser, getProducts, addProduct, updateProduct, deleteProduct, getCategories, uploadProductImage, showToast, openModal, closeModal, closeModalOnOverlay, formatPeso, initMobileSidebar } from './js/app.js';
+  import { renderSidebar, renderHeader } from './js/sidebar.js';
+
+  requireAuth();
+  document.getElementById('sidebar-mount').innerHTML = renderSidebar('products');
+  document.getElementById('header-mount').innerHTML  = renderHeader('Products', 'Manage your herbal medicine products');
+  document.getElementById('header-date').textContent = new Date().toLocaleDateString('en-PH', { weekday:'short', year:'numeric', month:'short', day:'numeric'});
+  initMobileSidebar();
+  document.getElementById('logout-btn').addEventListener('click', logoutUser);
+
+  closeModalOnOverlay('product-modal');
+  closeModalOnOverlay('delete-modal');
+
+  let allProducts = [], allCategories = [], editingId = null, deleteId = null;
+  const PAGE_SIZE = 10;
+  let currentPage = 1;
+
+  async function loadAll() {
+    [allProducts, allCategories] = await Promise.all([getProducts(), getCategories()]);
+
+    // Show empty DB banner if both are empty
+    const banner = document.getElementById('empty-db-banner');
+    if (allProducts.length === 0 && allCategories.length === 0) {
+      banner.style.display = 'flex';
+    } else {
+      banner.style.display = 'none';
+    }
+
+    populateCategoryFilters();
+    renderTable();
+  }
+
+  function populateCategoryFilters() {
+    const filterEl = document.getElementById('category-filter');
+    const formEl   = document.getElementById('p-category');
+    const opts = allCategories.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+    filterEl.innerHTML = '<option value="">All Categories</option>' + opts;
+    formEl.innerHTML   = '<option value="">Select category</option>' + opts;
+  }
+
+  function getFilteredProducts() {
+    const q  = document.getElementById('search-input').value.toLowerCase();
+    const cat = document.getElementById('category-filter').value;
+    return allProducts.filter(p =>
+      (!q || p.name.toLowerCase().includes(q) || (p.description || '').toLowerCase().includes(q)) &&
+      (!cat || p.categoryId === cat)
+    );
+  }
+
+  function renderTable() {
+    const filtered = getFilteredProducts();
+    const total    = filtered.length;
+    const pages    = Math.ceil(total / PAGE_SIZE) || 1;
+    if (currentPage > pages) currentPage = 1;
+    const slice    = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+
+    document.getElementById('product-count').textContent = `${total} Product${total !== 1 ? 's' : ''}`;
+    document.getElementById('pagination-info').textContent = `Showing ${slice.length} of ${total} items`;
+
+    const tbody = document.getElementById('products-tbody');
+
+    if (slice.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="7" style="padding:40px">
+        <div class="empty-state"><div class="empty-state-icon">🌿</div><h3>No Products Found</h3><p>Try adjusting your search filters.</p></div>
+      </td></tr>`;
+    } else {
+      tbody.innerHTML = slice.map(p => {
+        const catName  = allCategories.find(c => c.id === p.categoryId)?.name || '—';
+        const stock    = p.stock || 0;
+        const minStock = p.minStock || 5;
+        const isCrit   = stock === 0;
+        const isLow    = stock > 0 && stock <= minStock;
+        const statusBadge = isCrit
+          ? `<span class="badge badge-danger">Out of Stock</span>`
+          : isLow
+            ? `<span class="badge badge-warning">Low Stock</span>`
+            : `<span class="badge badge-success">In Stock</span>`;
+
+        return `<tr>
+          <td>
+            <div class="product-name-cell">
+              <div class="product-thumb">${p.imageUrl ? `<img src="${p.imageUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:6px">` : '🌿'}</div>
+              <div class="product-name-text">
+                <strong>${p.name}</strong>
+                <span>${p.description ? p.description.substring(0,40)+'...' : 'No description'}</span>
+              </div>
+            </div>
+          </td>
+          <td>${catName}</td>
+          <td><strong>${formatPeso(p.price || 0)}</strong></td>
+          <td>${stock} ${p.unit || 'pcs'}</td>
+          <td>${minStock} ${p.unit || 'pcs'}</td>
+          <td>${statusBadge}</td>
+          <td>
+            <div class="actions">
+              <button class="btn btn-icon btn-edit btn-sm" onclick="editProduct('${p.id}')" title="Edit">✏️</button>
+              <button class="btn btn-icon btn-delete btn-sm" onclick="confirmDelete('${p.id}','${p.name.replace(/'/g,'\\\'')}')" title="Delete">🗑️</button>
+            </div>
+          </td>
+        </tr>`;
+      }).join('');
+    }
+
+    // Pagination
+    const paginBtns = document.getElementById('pagination-btns');
+    if (pages <= 1) { paginBtns.innerHTML = ''; return; }
+    let html = `<button class="page-btn" onclick="goPage(${currentPage-1})" ${currentPage===1?'disabled':''}>‹</button>`;
+    for (let i = 1; i <= pages; i++) {
+      html += `<button class="page-btn ${i===currentPage?'active':''}" onclick="goPage(${i})">${i}</button>`;
+    }
+    html += `<button class="page-btn" onclick="goPage(${currentPage+1})" ${currentPage===pages?'disabled':''}>›</button>`;
+    paginBtns.innerHTML = html;
+  }
+
+  window.goPage = p => { currentPage = p; renderTable(); };
+
+  // ADD PRODUCT MODAL
+  document.getElementById('add-product-btn').addEventListener('click', () => {
+    editingId = null;
+    document.getElementById('modal-title').textContent = 'Add New Product';
+    document.getElementById('product-form').reset();
+    document.getElementById('product-id').value = '';
+    document.getElementById('image-preview').style.display = 'none';
+    document.getElementById('upload-placeholder').style.display = 'block';
+    openModal('product-modal');
+  });
+
+  document.getElementById('modal-close').addEventListener('click',        () => closeModal('product-modal'));
+  document.getElementById('cancel-btn').addEventListener('click',         () => closeModal('product-modal'));
+  document.getElementById('delete-modal-close').addEventListener('click', () => closeModal('delete-modal'));
+  document.getElementById('delete-cancel-btn').addEventListener('click',  () => closeModal('delete-modal'));
+
+  // Image preview
+  document.getElementById('product-image').addEventListener('change', e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      const preview = document.getElementById('image-preview');
+      preview.src = ev.target.result;
+      preview.style.display = 'block';
+      document.getElementById('upload-placeholder').style.display = 'none';
+    };
+    reader.readAsDataURL(file);
+  });
+
+  // Edit
+  window.editProduct = id => {
+    const p = allProducts.find(x => x.id === id);
+    if (!p) return;
+    editingId = id;
+    document.getElementById('modal-title').textContent = 'Edit Product';
+    document.getElementById('product-id').value    = id;
+    document.getElementById('p-name').value         = p.name || '';
+    document.getElementById('p-category').value     = p.categoryId || '';
+    document.getElementById('p-price').value        = p.price || '';
+    document.getElementById('p-stock').value        = p.stock || '';
+    document.getElementById('p-unit').value         = p.unit || '';
+    document.getElementById('p-minstock').value     = p.minStock || '';
+    document.getElementById('p-desc').value         = p.description || '';
+    if (p.imageUrl) {
+      const preview = document.getElementById('image-preview');
+      preview.src = p.imageUrl;
+      preview.style.display = 'block';
+      document.getElementById('upload-placeholder').style.display = 'none';
+    } else {
+      document.getElementById('image-preview').style.display = 'none';
+      document.getElementById('upload-placeholder').style.display = 'block';
+    }
+    openModal('product-modal');
+  };
+
+  // Confirm delete
+  window.confirmDelete = (id, name) => {
+    deleteId = id;
+    document.getElementById('delete-product-name').textContent = name;
+    openModal('delete-modal');
+  };
+
+  // Save product
+  document.getElementById('save-product-btn').addEventListener('click', async () => {
+    const name     = document.getElementById('p-name').value.trim();
+    const catId    = document.getElementById('p-category').value;
+    const price    = parseFloat(document.getElementById('p-price').value);
+    const stock    = parseInt(document.getElementById('p-stock').value);
+    const unit     = document.getElementById('p-unit').value.trim() || 'pcs';
+    const minStock = parseInt(document.getElementById('p-minstock').value) || 5;
+    const desc     = document.getElementById('p-desc').value.trim();
+    const fileInput = document.getElementById('product-image');
+
+    if (!name || !catId || isNaN(price) || isNaN(stock)) {
+      showToast('Please fill in all required fields.', 'error'); return;
+    }
+
+    const catName = allCategories.find(c => c.id === catId)?.name || '';
+    const btn = document.getElementById('save-product-btn');
+    btn.disabled = true;
+    btn.textContent = 'Saving...';
+
+    try {
+      let imageUrl = editingId ? (allProducts.find(p => p.id === editingId)?.imageUrl || '') : '';
+
+      const data = { name, categoryId: catId, categoryName: catName, price, stock, unit, minStock, description: desc, imageUrl };
+
+      if (editingId) {
+        // Try image upload separately — don't block save if Storage fails
+        if (fileInput.files[0]) {
+          try {
+            imageUrl = await uploadProductImage(fileInput.files[0], editingId);
+            data.imageUrl = imageUrl;
+          } catch (imgErr) {
+            console.warn('Image upload failed (Storage may not be enabled yet):', imgErr.message);
+            showToast('Product saved, but image upload failed. Check Firebase Storage setup.', 'warning');
+          }
+        }
+        await updateProduct(editingId, data);
+        showToast('Product updated successfully!', 'success');
+      } else {
+        const ref = await addProduct(data);
+        if (fileInput.files[0]) {
+          try {
+            const url = await uploadProductImage(fileInput.files[0], ref.id);
+            await updateProduct(ref.id, { imageUrl: url });
+          } catch (imgErr) {
+            console.warn('Image upload failed (Storage may not be enabled yet):', imgErr.message);
+            showToast('Product saved, but image upload failed. Check Firebase Storage setup.', 'warning');
+          }
+        }
+        showToast('Product added successfully!', 'success');
+      }
+
+      closeModal('product-modal');
+      await loadAll();
+    } catch (e) {
+      showToast('Error saving product: ' + e.message, 'error');
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = '💾 Save Product';
+    }
+  });
+
+  // Delete product
+  document.getElementById('confirm-delete-btn').addEventListener('click', async () => {
+    if (!deleteId) return;
+    try {
+      await deleteProduct(deleteId);
+      showToast('Product deleted.', 'success');
+      closeModal('delete-modal');
+      await loadAll();
+    } catch (e) {
+      showToast('Error deleting: ' + e.message, 'error');
+    }
+  });
+
+  // Live search & filter
+  document.getElementById('search-input').addEventListener('input', () => { currentPage = 1; renderTable(); });
+  document.getElementById('category-filter').addEventListener('change', () => { currentPage = 1; renderTable(); });
+
+  // ── SAMPLE DATA ──────────────────────────────────────────
+  const SAMPLE_CATEGORIES = [
+    { name: 'Herbal Medicine',   icon: '🌿', description: 'Traditional Filipino herbal remedies' },
+    { name: 'Herbal Supplement', icon: '💊', description: 'Nutritional and health supplements' },
+    { name: 'Treatment Pack',    icon: '🧴', description: 'Bundled treatment packages' },
+    { name: 'Tincture',          icon: '🧪', description: 'Liquid herbal extracts' },
+    { name: 'Others',            icon: '🌱', description: 'Miscellaneous herbal products' },
+  ];
+
+  const SAMPLE_PRODUCTS = [
+    { name: 'Paragis Bila Bila',      categoryName: 'Herbal Medicine',   price: 75,  stock: 50, unit: 'pcs',     minStock: 10, description: 'Premium Paragis capsules. Anti-inflammatory and detoxifying.' },
+    { name: 'Tsaang Gubat',           categoryName: 'Herbal Medicine',   price: 65,  stock: 35, unit: 'pcs',     minStock: 8,  description: 'Tsaang Gubat tea for digestive health and stomach pain relief.' },
+    { name: 'Lagundi',                categoryName: 'Herbal Medicine',   price: 60,  stock: 12, unit: 'bottles', minStock: 10, description: 'Lagundi syrup for cough and colds. DOH-approved herbal medicine.' },
+    { name: 'Sambong',                categoryName: 'Herbal Medicine',   price: 55,  stock: 8,  unit: 'pcs',     minStock: 10, description: 'Sambong tablets for kidney stone dissolution.' },
+    { name: 'Moringa (Malunggay)',    categoryName: 'Herbal Supplement', price: 50,  stock: 45, unit: 'bottles', minStock: 10, description: 'Moringa capsules rich in vitamins and antioxidants.' },
+    { name: 'Ampalaya Extract',       categoryName: 'Herbal Supplement', price: 70,  stock: 20, unit: 'bottles', minStock: 5,  description: 'Bitter melon extract for blood sugar management.' },
+    { name: 'Akapulko Cream',         categoryName: 'Herbal Medicine',   price: 85,  stock: 3,  unit: 'tubes',   minStock: 5,  description: 'Akapulko antifungal cream for skin infections.' },
+    { name: 'Bawang Capsules',        categoryName: 'Herbal Supplement', price: 45,  stock: 60, unit: 'bottles', minStock: 10, description: 'Garlic capsules for cholesterol management.' },
+    { name: 'Detox Treatment Pack',   categoryName: 'Treatment Pack',    price: 250, stock: 15, unit: 'packs',   minStock: 5,  description: 'Complete detox bundle: Paragis + Sambong + Moringa.' },
+    { name: 'Ginger Tincture',        categoryName: 'Tincture',          price: 120, stock: 0,  unit: 'bottles', minStock: 5,  description: 'Pure ginger liquid extract for nausea and immunity.' },
+  ];
+
+  document.getElementById('seed-sample-btn').addEventListener('click', async () => {
+    if (allProducts.length > 0) {
+      showToast('May existing products na. Hindi na kailangan mag-seed.', 'warning');
+      return;
+    }
+
+    if (!confirm('Mag-a-add ito ng 5 categories at 10 sample herbal products sa iyong database. Ituloy?')) return;
+
+    const btn = document.getElementById('seed-sample-btn');
+    btn.disabled    = true;
+    btn.textContent = '⏳ Loading...';
+
+    try {
+      // Import Firestore directly for batch seeding
+      const { db } = await import('./js/firebase-config.js');
+      const { collection: col, addDoc: add, serverTimestamp: st } =
+        await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js");
+
+      // 1. Add categories
+      const catIdMap = {};
+      for (const cat of SAMPLE_CATEGORIES) {
+        const ref = await add(col(db, 'categories'), { ...cat, createdAt: st() });
+        catIdMap[cat.name] = ref.id;
+      }
+
+      // 2. Add products
+      for (const prod of SAMPLE_PRODUCTS) {
+        const { categoryName, ...rest } = prod;
+        await add(col(db, 'products'), {
+          ...rest,
+          categoryId:   catIdMap[categoryName] || '',
+          categoryName: categoryName,
+          imageUrl:     '',
+          createdAt:    st()
+        });
+      }
+
+      showToast('✅ 5 categories at 10 products ang na-add!', 'success');
+      await loadAll();
+
+    } catch (e) {
+      showToast('Error: ' + e.message, 'error');
+    } finally {
+      btn.disabled    = false;
+      btn.textContent = '🌿 Load Sample Data';
+    }
+  });
+
+  loadAll();
+</script>
+</body>
+</html>
