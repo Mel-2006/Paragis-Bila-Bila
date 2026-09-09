@@ -203,7 +203,7 @@
 </div>
 
 <script type="module">
-  import { requireAuth, logoutUser, getProducts, addProduct, updateProduct, deleteProduct, getCategories, uploadProductImage, showToast, openModal, closeModal, closeModalOnOverlay, formatPeso, initMobileSidebar } from './js/app.js';
+  import { requireAuth, onAuthReady, logoutUser, getProducts, addProduct, updateProduct, deleteProduct, getCategories, uploadProductImage, showToast, openModal, closeModal, closeModalOnOverlay, formatPeso, initMobileSidebar } from './js/app.js';
   import { renderSidebar, renderHeader } from './js/sidebar.js';
 
   requireAuth();
@@ -531,7 +531,8 @@
     }
   });
 
-  loadAll();
+  // Wait for auth before fetching
+  onAuthReady(() => loadAll());
 </script>
 </body>
 </html>
