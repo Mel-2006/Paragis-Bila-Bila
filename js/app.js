@@ -31,6 +31,17 @@ export function requireAuth(redirectTo = 'index.html') {
   });
 }
 
+// ── AUTH READY — resolves with user once auth state is known ──
+// Use this instead of calling loadData() directly at page load.
+// Ensures Firestore reads happen only AFTER Firebase confirms auth,
+// preventing "permission-denied" errors from premature requests.
+export function onAuthReady(callback) {
+  onAuthStateChanged(auth, user => {
+    if (user) callback(user);
+    // If no user, requireAuth() already handles the redirect
+  });
+}
+
 export function requireGuest(redirectTo = 'dashboard.html') {
   onAuthStateChanged(auth, user => {
     if (user) window.location.href = redirectTo;
