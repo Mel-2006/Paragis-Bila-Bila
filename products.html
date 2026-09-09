@@ -54,6 +54,23 @@
         <button class="btn btn-primary" id="add-product-btn">
           ➕ Add Product
         </button>
+        <button class="btn btn-secondary" id="seed-sample-btn" title="Load sample herbal products for testing">
+          🌿 Load Sample Data
+        </button>
+      </div>
+
+      <!-- Empty DB Banner (shown when no products AND no categories) -->
+      <div id="empty-db-banner" style="display:none; align-items:center; gap:14px;
+        background:#FFF8E1; border:1px solid #FFE082; border-left:4px solid #F57F17;
+        border-radius:10px; padding:16px 20px; margin-bottom:20px; font-size:14px; color:#E65100;">
+        <span style="font-size:24px">⚠️</span>
+        <div>
+          <strong>Walang data sa database!</strong> — Your Firebase Firestore is empty.<br>
+          <span style="font-size:13px; color:#5D4037">
+            Click <strong>"🌿 Load Sample Data"</strong> to add sample herbal products instantly,
+            or click <strong>"➕ Add Product"</strong> to add manually.
+          </span>
+        </div>
       </div>
 
       <!-- Products Table Card -->
@@ -205,6 +222,15 @@
 
   async function loadAll() {
     [allProducts, allCategories] = await Promise.all([getProducts(), getCategories()]);
+
+    // Show empty DB banner if both are empty
+    const banner = document.getElementById('empty-db-banner');
+    if (allProducts.length === 0 && allCategories.length === 0) {
+      banner.style.display = 'flex';
+    } else {
+      banner.style.display = 'none';
+    }
+
     populateCategoryFilters();
     renderTable();
   }
@@ -423,6 +449,76 @@
   // Live search & filter
   document.getElementById('search-input').addEventListener('input', () => { currentPage = 1; renderTable(); });
   document.getElementById('category-filter').addEventListener('change', () => { currentPage = 1; renderTable(); });
+
+  // ── SAMPLE DATA ──────────────────────────────────────────
+  const SAMPLE_CATEGORIES = [
+    { name: 'Herbal Medicine',   icon: '🌿', description: 'Traditional Filipino herbal remedies' },
+    { name: 'Herbal Supplement', icon: '💊', description: 'Nutritional and health supplements' },
+    { name: 'Treatment Pack',    icon: '🧴', description: 'Bundled treatment packages' },
+    { name: 'Tincture',          icon: '🧪', description: 'Liquid herbal extracts' },
+    { name: 'Others',            icon: '🌱', description: 'Miscellaneous herbal products' },
+  ];
+
+  const SAMPLE_PRODUCTS = [
+    { name: 'Paragis Bila Bila',      categoryName: 'Herbal Medicine',   price: 75,  stock: 50, unit: 'pcs',     minStock: 10, description: 'Premium Paragis capsules. Anti-inflammatory and detoxifying.' },
+    { name: 'Tsaang Gubat',           categoryName: 'Herbal Medicine',   price: 65,  stock: 35, unit: 'pcs',     minStock: 8,  description: 'Tsaang Gubat tea for digestive health and stomach pain relief.' },
+    { name: 'Lagundi',                categoryName: 'Herbal Medicine',   price: 60,  stock: 12, unit: 'bottles', minStock: 10, description: 'Lagundi syrup for cough and colds. DOH-approved herbal medicine.' },
+    { name: 'Sambong',                categoryName: 'Herbal Medicine',   price: 55,  stock: 8,  unit: 'pcs',     minStock: 10, description: 'Sambong tablets for kidney stone dissolution.' },
+    { name: 'Moringa (Malunggay)',    categoryName: 'Herbal Supplement', price: 50,  stock: 45, unit: 'bottles', minStock: 10, description: 'Moringa capsules rich in vitamins and antioxidants.' },
+    { name: 'Ampalaya Extract',       categoryName: 'Herbal Supplement', price: 70,  stock: 20, unit: 'bottles', minStock: 5,  description: 'Bitter melon extract for blood sugar management.' },
+    { name: 'Akapulko Cream',         categoryName: 'Herbal Medicine',   price: 85,  stock: 3,  unit: 'tubes',   minStock: 5,  description: 'Akapulko antifungal cream for skin infections.' },
+    { name: 'Bawang Capsules',        categoryName: 'Herbal Supplement', price: 45,  stock: 60, unit: 'bottles', minStock: 10, description: 'Garlic capsules for cholesterol management.' },
+    { name: 'Detox Treatment Pack',   categoryName: 'Treatment Pack',    price: 250, stock: 15, unit: 'packs',   minStock: 5,  description: 'Complete detox bundle: Paragis + Sambong + Moringa.' },
+    { name: 'Ginger Tincture',        categoryName: 'Tincture',          price: 120, stock: 0,  unit: 'bottles', minStock: 5,  description: 'Pure ginger liquid extract for nausea and immunity.' },
+  ];
+
+  document.getElementById('seed-sample-btn').addEventListener('click', async () => {
+    if (allProducts.length > 0) {
+      showToast('May existing products na. Hindi na kailangan mag-seed.', 'warning');
+      return;
+    }
+
+    if (!confirm('Mag-a-add ito ng 5 categories at 10 sample herbal products sa iyong database. Ituloy?')) return;
+
+    const btn = document.getElementById('seed-sample-btn');
+    btn.disabled    = true;
+    btn.textContent = '⏳ Loading...';
+
+    try {
+      // Import Firestore directly for batch seeding
+      const { db } = await import('./js/firebase-config.js');
+      const { collection: col, addDoc: add, serverTimestamp: st } =
+        await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js");
+
+      // 1. Add categories
+      const catIdMap = {};
+      for (const cat of SAMPLE_CATEGORIES) {
+        const ref = await add(col(db, 'categories'), { ...cat, createdAt: st() });
+        catIdMap[cat.name] = ref.id;
+      }
+
+      // 2. Add products
+      for (const prod of SAMPLE_PRODUCTS) {
+        const { categoryName, ...rest } = prod;
+        await add(col(db, 'products'), {
+          ...rest,
+          categoryId:   catIdMap[categoryName] || '',
+          categoryName: categoryName,
+          imageUrl:     '',
+          createdAt:    st()
+        });
+      }
+
+      showToast('✅ 5 categories at 10 products ang na-add!', 'success');
+      await loadAll();
+
+    } catch (e) {
+      showToast('Error: ' + e.message, 'error');
+    } finally {
+      btn.disabled    = false;
+      btn.textContent = '🌿 Load Sample Data';
+    }
+  });
 
   loadAll();
 </script>
