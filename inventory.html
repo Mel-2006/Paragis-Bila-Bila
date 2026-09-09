@@ -124,6 +124,16 @@
       <button class="modal-close" onclick="closeStockModal()">✕</button>
     </div>
     <div class="modal-body">
+      <!-- No products warning -->
+      <div id="no-products-warn" style="display:none; align-items:center; gap:12px; background:#FFF8E1; border:1px solid #FFE082; border-left:4px solid #F57F17; border-radius:8px; padding:14px 16px; margin-bottom:16px; font-size:13px; color:#E65100;">
+        <span style="font-size:20px">⚠️</span>
+        <div>
+          <strong>Walang products pa!</strong><br>
+          <span>Mag-add muna ng products sa </span>
+          <a href="products.html" style="color:#2E7D32; font-weight:700; text-decoration:underline">Products page</a>
+          <span> bago gumawa ng stock movement.</span>
+        </div>
+      </div>
       <form id="stock-form">
         <input type="hidden" id="stock-type" value="in" />
         <div class="form-group">
@@ -215,7 +225,17 @@
   }
 
   function populateSelects() {
-    const opts = allProducts.map(p => `<option value="${p.id}" data-stock="${p.stock || 0}" data-unit="${p.unit || 'pcs'}">${p.name} (${p.stock || 0} ${p.unit || 'pcs'})</option>`).join('');
+    if (allProducts.length === 0) {
+      const emptyOpt = '<option value="" disabled>⚠️ No products yet — add products first</option>';
+      document.getElementById('stock-product').innerHTML  = emptyOpt;
+      document.getElementById('update-product').innerHTML = emptyOpt;
+      return;
+    }
+    const opts = allProducts.map(p =>
+      `<option value="${p.id}" data-stock="${p.stock || 0}" data-unit="${p.unit || 'pcs'}">
+        ${p.name} (${p.stock || 0} ${p.unit || 'pcs'})
+      </option>`
+    ).join('');
     document.getElementById('stock-product').innerHTML   = '<option value="">Choose a product...</option>' + opts;
     document.getElementById('update-product').innerHTML  = '<option value="">Choose a product...</option>' + opts;
   }
@@ -246,7 +266,14 @@
 
     const tbody = document.getElementById('inv-tbody');
     if (slice.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="8" style="padding:40px"><div class="empty-state"><div class="empty-state-icon">📦</div><h3>No Items Found</h3></div></td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="8" style="padding:40px">
+        <div class="empty-state">
+          <div class="empty-state-icon">📦</div>
+          <h3>No Products in Inventory</h3>
+          <p>You haven't added any products yet.</p>
+          <a href="products.html" class="btn btn-primary" style="margin-top:8px">➕ Add Products First</a>
+        </div>
+      </td></tr>`;
     } else {
       tbody.innerHTML = slice.map(p => {
         const catName = allCategories.find(c => c.id === p.categoryId)?.name || '—';
@@ -325,6 +352,18 @@
     document.getElementById('stock-modal-title').textContent = type === 'in' ? '📥 Stock In' : '📤 Stock Out';
     document.getElementById('stock-form').reset();
     document.getElementById('current-stock-info').style.display = 'none';
+
+    // Show warning banner if no products
+    const warn = document.getElementById('no-products-warn');
+    const saveBtn = document.getElementById('save-stock-btn');
+    if (allProducts.length === 0) {
+      warn.style.display    = 'flex';
+      saveBtn.disabled      = true;
+    } else {
+      warn.style.display    = 'none';
+      saveBtn.disabled      = false;
+    }
+
     openModal('stock-modal');
   };
 
