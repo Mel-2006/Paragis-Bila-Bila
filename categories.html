@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Categories — Paragis Bila Bila</title>
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+<div class="app-layout">
+  <div id="sidebar-mount"></div>
+  <div class="main-content">
+    <div id="header-mount"></div>
+    <main class="page-body">
+
+      <!-- Filter + Add -->
+      <div class="filter-bar">
+        <div class="search-box">
+          <span class="search-icon">🔍</span>
+          <input type="text" id="cat-search" placeholder="Search categories..." />
+        </div>
+        <button class="btn btn-primary" id="add-cat-btn">➕ Add Category</button>
+      </div>
+
+      <!-- Category Cards -->
+      <div class="category-grid" id="category-grid">
+        <div class="empty-state" style="grid-column:1/-1; padding:60px 0">
+          <div class="empty-state-icon">🏷️</div>
+          <h3>Loading categories...</h3>
+        </div>
+      </div>
+
+      <!-- Category Products Table -->
+      <div class="card" id="cat-products-card" style="margin-top:28px; display:none">
+        <div class="card-header">
+          <div>
+            <div class="card-title" id="cat-products-title">Products in Category</div>
+            <div class="card-subtitle">All products under this category</div>
+          </div>
+          <button class="btn btn-secondary btn-sm" onclick="hideCategoryProducts()">✕ Close</button>
+        </div>
+        <div class="table-wrapper">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Product Name</th>
+                <th>Price</th>
+                <th>Stock</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="cat-products-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- ADD / EDIT CATEGORY MODAL -->
+<div class="modal-overlay" id="cat-modal">
+  <div class="modal" style="max-width:460px">
+    <div class="modal-header">
+      <h3 class="modal-title" id="cat-modal-title">Add Category</h3>
+      <button class="modal-close" id="cat-modal-close">✕</button>
+    </div>
+    <div class="modal-body">
+      <form id="cat-form">
+        <input type="hidden" id="cat-id" />
+        <div class="form-group">
+          <label class="form-label">Category Name <span class="required">*</span></label>
+          <input class="form-control" type="text" id="cat-name" placeholder="e.g. Herbal Medicine" required />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Icon (Emoji)</label>
+          <input class="form-control" type="text" id="cat-icon" placeholder="e.g. 🌿" maxlength="4" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Description</label>
+          <textarea class="form-control" id="cat-desc" placeholder="Brief description of this category..." rows="3"></textarea>
+        </div>
+      </form>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" id="cat-cancel-btn">Cancel</button>
+      <button class="btn btn-primary" id="save-cat-btn">💾 Save Category</button>
+    </div>
+  </div>
+</div>
+
+<!-- DELETE CATEGORY MODAL -->
+<div class="modal-overlay" id="delete-cat-modal">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-header">
+      <h3 class="modal-title">Delete Category</h3>
+      <button class="modal-close" id="del-cat-close">✕</button>
+    </div>
+    <div class="modal-body" style="text-align:center;padding:32px 24px">
+      <div style="font-size:52px;margin-bottom:16px">⚠️</div>
+      <p style="font-size:16px;font-weight:600;margin-bottom:8px">Delete this category?</p>
+      <p style="font-size:14px;color:var(--text-light)">Deleting <strong id="del-cat-name"></strong> will NOT remove its products. They will become uncategorized.</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" id="del-cat-cancel">Cancel</button>
+      <button class="btn btn-danger" id="confirm-del-cat">🗑️ Delete</button>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+  import { requireAuth, logoutUser, getCategories, addCategory, deleteCategory, getProducts, showToast, openModal, closeModal, closeModalOnOverlay, formatPeso, initMobileSidebar } from './js/app.js';
+  import { renderSidebar, renderHeader } from './js/sidebar.js';
+
+  requireAuth();
+  document.getElementById('sidebar-mount').innerHTML = renderSidebar('categories');
+  document.getElementById('header-mount').innerHTML  = renderHeader('Categories', 'Manage product categories');
+  document.getElementById('header-date').textContent = new Date().toLocaleDateString('en-PH', { weekday:'short', year:'numeric', month:'short', day:'numeric'});
+  initMobileSidebar();
+  document.getElementById('logout-btn').addEventListener('click', logoutUser);
+
+  closeModalOnOverlay('cat-modal');
+  closeModalOnOverlay('delete-cat-modal');
+
+  let allCategories = [], allProducts = [], deleteCatId = null, editCatId = null;
+
+  const ICONS = ['🌿','🍃','🌱','🌾','🌺','🧴','💊','🧪','🌻','🌼','🍀','🌳'];
+
+  async function loadAll() {
+    [allCategories, allProducts] = await Promise.all([getCategories(), getProducts()]);
+    renderGrid();
+  }
+
+  function getCount(catId) {
+    return allProducts.filter(p => p.categoryId === catId).length;
+  }
+
+  function renderGrid() {
+    const q = document.getElementById('cat-search').value.toLowerCase();
+    const filtered = allCategories.filter(c => !q || c.name.toLowerCase().includes(q));
+    const grid = document.getElementById('category-grid');
+
+    if (filtered.length === 0) {
+      grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><div class="empty-state-icon">🏷️</div><h3>No Categories Found</h3><p>Click "Add Category" to create your first category.</p></div>`;
+      return;
+    }
+
+    grid.innerHTML = filtered.map(c => {
+      const count = getCount(c.id);
+      const icon  = c.icon || '🌿';
+      return `<div class="category-card" onclick="viewCategoryProducts('${c.id}','${c.name.replace(/'/g,'\\\'')}')" title="Click to view products">
+        <div class="category-icon">${icon}</div>
+        <div class="category-name">${c.name}</div>
+        <div class="category-count">${count} Product${count !== 1 ? 's' : ''}</div>
+        <div style="display:flex;gap:8px;justify-content:center;margin-top:8px">
+          <button class="btn btn-sm btn-edit btn-icon" onclick="event.stopPropagation();editCat('${c.id}')" title="Edit">✏️</button>
+          <button class="btn btn-sm btn-delete btn-icon" onclick="event.stopPropagation();confirmDelCat('${c.id}','${c.name.replace(/'/g,'\\\'')}')" title="Delete">🗑️</button>
+        </div>
+        ${c.description ? `<p style="font-size:11px;color:var(--text-light);margin-top:8px;line-height:1.4">${c.description}</p>` : ''}
+      </div>`;
+    }).join('');
+  }
+
+  window.viewCategoryProducts = (catId, catName) => {
+    const prods  = allProducts.filter(p => p.categoryId === catId);
+    const card   = document.getElementById('cat-products-card');
+    document.getElementById('cat-products-title').textContent = `Products — ${catName}`;
+    const tbody  = document.getElementById('cat-products-tbody');
+
+    if (prods.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="4" class="text-center text-muted" style="padding:30px">No products in this category yet.</td></tr>`;
+    } else {
+      tbody.innerHTML = prods.map(p => {
+        const stock = p.stock || 0, min = p.minStock || 5;
+        const badge = stock === 0 ? `<span class="badge badge-danger">Out of Stock</span>`
+                    : stock <= min ? `<span class="badge badge-warning">Low Stock</span>`
+                    : `<span class="badge badge-success">In Stock</span>`;
+        return `<tr>
+          <td><strong>${p.name}</strong></td>
+          <td>${formatPeso(p.price || 0)}</td>
+          <td>${stock} ${p.unit || 'pcs'}</td>
+          <td>${badge}</td>
+        </tr>`;
+      }).join('');
+    }
+    card.style.display = 'block';
+    card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
+  window.hideCategoryProducts = () => {
+    document.getElementById('cat-products-card').style.display = 'none';
+  };
+
+  // ADD
+  document.getElementById('add-cat-btn').addEventListener('click', () => {
+    editCatId = null;
+    document.getElementById('cat-modal-title').textContent = 'Add Category';
+    document.getElementById('cat-form').reset();
+    document.getElementById('cat-icon').value = ICONS[Math.floor(Math.random() * ICONS.length)];
+    openModal('cat-modal');
+  });
+
+  // EDIT
+  window.editCat = id => {
+    const c = allCategories.find(x => x.id === id);
+    if (!c) return;
+    editCatId = id;
+    document.getElementById('cat-modal-title').textContent = 'Edit Category';
+    document.getElementById('cat-id').value   = id;
+    document.getElementById('cat-name').value = c.name || '';
+    document.getElementById('cat-icon').value = c.icon || '';
+    document.getElementById('cat-desc').value = c.description || '';
+    openModal('cat-modal');
+  };
+
+  document.getElementById('cat-modal-close').addEventListener('click', () => closeModal('cat-modal'));
+  document.getElementById('cat-cancel-btn').addEventListener('click', () => closeModal('cat-modal'));
+  document.getElementById('del-cat-close').addEventListener('click',  () => closeModal('delete-cat-modal'));
+  document.getElementById('del-cat-cancel').addEventListener('click', () => closeModal('delete-cat-modal'));
+
+  // SAVE CATEGORY
+  document.getElementById('save-cat-btn').addEventListener('click', async () => {
+    const { updateDoc, doc } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js");
+    const name = document.getElementById('cat-name').value.trim();
+    const icon = document.getElementById('cat-icon').value.trim() || '🌿';
+    const desc = document.getElementById('cat-desc').value.trim();
+
+    if (!name) { showToast('Category name is required.', 'error'); return; }
+
+    const btn = document.getElementById('save-cat-btn');
+    btn.disabled = true; btn.textContent = 'Saving...';
+    try {
+      if (editCatId) {
+        // Update existing — use addCategory helper is for add only, so import db directly
+        const { db } = await import('./js/firebase-config.js');
+        const { serverTimestamp } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js");
+        await updateDoc(doc(db, 'categories', editCatId), { name, icon, description: desc, updatedAt: serverTimestamp() });
+        showToast('Category updated!', 'success');
+      } else {
+        await addCategory({ name, icon, description: desc });
+        showToast('Category added!', 'success');
+      }
+      closeModal('cat-modal');
+      await loadAll();
+    } catch (e) {
+      showToast('Error: ' + e.message, 'error');
+    } finally {
+      btn.disabled = false; btn.innerHTML = '💾 Save Category';
+    }
+  });
+
+  // DELETE
+  window.confirmDelCat = (id, name) => {
+    deleteCatId = id;
+    document.getElementById('del-cat-name').textContent = name;
+    openModal('delete-cat-modal');
+  };
+
+  document.getElementById('confirm-del-cat').addEventListener('click', async () => {
+    if (!deleteCatId) return;
+    try {
+      await deleteCategory(deleteCatId);
+      showToast('Category deleted.', 'success');
+      closeModal('delete-cat-modal');
+      hideCategoryProducts();
+      await loadAll();
+    } catch (e) {
+      showToast('Error: ' + e.message, 'error');
+    }
+  });
+
+  document.getElementById('cat-search').addEventListener('input', renderGrid);
+
+  loadAll();
+</script>
+</body>
+</html>

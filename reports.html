@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Reports — Paragis Bila Bila</title>
+  <link rel="stylesheet" href="css/styles.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+  <style>
+    .report-type-tabs {
+      display: flex; gap: 8px; margin-bottom: 24px; flex-wrap: wrap;
+    }
+    .report-tab {
+      padding: 10px 20px;
+      border-radius: 24px;
+      border: 2px solid var(--border);
+      background: var(--white);
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-mid);
+      transition: var(--transition);
+    }
+    .report-tab.active {
+      background: var(--primary);
+      border-color: var(--primary);
+      color: #fff;
+    }
+    .report-tab:hover:not(.active) { border-color: var(--primary); color: var(--primary); }
+
+    .date-range-bar {
+      display: flex; align-items: center; gap: 12px;
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px 20px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+
+    .date-range-bar label { font-size: 13px; font-weight: 600; color: var(--text-mid); }
+
+    canvas { max-height: 300px; }
+
+    .top-products-list { list-style: none; padding: 0; }
+    .top-products-list li {
+      display: flex; align-items: center; gap: 12px;
+      padding: 12px 0; border-bottom: 1px solid var(--border);
+    }
+    .top-products-list li:last-child { border-bottom: none; }
+    .rank-badge {
+      width: 28px; height: 28px; border-radius: 50%;
+      background: var(--primary-pale); color: var(--primary);
+      font-size: 13px; font-weight: 800;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .rank-badge.gold   { background: #FFF8E1; color: #F57F17; }
+    .rank-badge.silver { background: #ECEFF1; color: #546E7A; }
+    .rank-badge.bronze { background: #FBE9E7; color: #BF360C; }
+  </style>
+</head>
+<body>
+<div class="app-layout">
+  <div id="sidebar-mount"></div>
+  <div class="main-content">
+    <div id="header-mount"></div>
+    <main class="page-body">
+
+      <!-- Report Type Tabs -->
+      <div class="report-type-tabs">
+        <button class="report-tab active" onclick="setReportType('sales', this)">📊 Sales Report</button>
+        <button class="report-tab" onclick="setReportType('inventory', this)">📦 Inventory Report</button>
+        <button class="report-tab" onclick="setReportType('products', this)">🌿 Product Report</button>
+      </div>
+
+      <!-- Date Range -->
+      <div class="date-range-bar">
+        <label>From:</label>
+        <input type="date" class="form-control" id="from-date" style="width:160px" />
+        <label>To:</label>
+        <input type="date" class="form-control" id="to-date" style="width:160px" />
+        <button class="btn btn-primary btn-sm" id="generate-btn">⚡ Generate</button>
+        <button class="btn btn-secondary btn-sm" id="export-btn">📥 Export CSV</button>
+        <div class="badge badge-primary" id="report-period-label" style="margin-left:auto">All Time</div>
+      </div>
+
+      <!-- Summary Cards -->
+      <div class="report-summary" id="report-summary">
+        <div class="report-summary-item"><div class="value" id="rs-1">—</div><div class="label">Total Sales</div></div>
+        <div class="report-summary-item"><div class="value" id="rs-2">—</div><div class="label">Total Orders</div></div>
+        <div class="report-summary-item"><div class="value" id="rs-3">—</div><div class="label">Avg. Order Value</div></div>
+        <div class="report-summary-item"><div class="value" id="rs-4">—</div><div class="label">Best Seller</div></div>
+      </div>
+
+      <!-- Charts + Tables Grid -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px" id="report-grid">
+
+        <!-- Sales Chart -->
+        <div class="card" id="sales-chart-card">
+          <div class="card-header">
+            <div class="card-title">Sales Overview</div>
+            <div class="card-subtitle">Daily sales trend</div>
+          </div>
+          <div class="card-body">
+            <canvas id="sales-chart"></canvas>
+          </div>
+        </div>
+
+        <!-- Top Products -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Top Selling Products</div>
+            <div class="card-subtitle">By quantity sold</div>
+          </div>
+          <div class="card-body">
+            <ul class="top-products-list" id="top-products-list">
+              <li style="color:var(--text-light);font-size:13px">Generate report to see top products.</li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Category Breakdown -->
+        <div class="card" id="cat-chart-card">
+          <div class="card-header">
+            <div class="card-title">Sales by Category</div>
+            <div class="card-subtitle">Revenue breakdown</div>
+          </div>
+          <div class="card-body" style="display:flex;align-items:center;justify-content:center">
+            <canvas id="cat-chart" style="max-height:250px;max-width:250px"></canvas>
+          </div>
+        </div>
+
+        <!-- Inventory Status -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Stock Level Summary</div>
+            <div class="card-subtitle">Current inventory health</div>
+          </div>
+          <div class="card-body" id="inv-summary-body">
+            <p style="color:var(--text-light);font-size:13px">Generate report to see inventory status.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Detailed Table -->
+      <div class="card" style="margin-top:20px">
+        <div class="card-header">
+          <div class="card-title" id="detail-table-title">Detailed Transactions</div>
+        </div>
+        <div class="table-wrapper">
+          <table class="data-table" id="detail-table">
+            <thead id="detail-thead"></thead>
+            <tbody id="detail-tbody">
+              <tr><td colspan="6" class="text-center text-muted" style="padding:30px">Click "Generate" to load report data.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<script type="module">
+  import { requireAuth, logoutUser, getSales, getProducts, getCategories, formatPeso, formatDateTime, initMobileSidebar } from './js/app.js';
+  import { renderSidebar, renderHeader } from './js/sidebar.js';
+
+  requireAuth();
+  document.getElementById('sidebar-mount').innerHTML = renderSidebar('reports');
+  document.getElementById('header-mount').innerHTML  = renderHeader('Reports', 'Generate and analyze business reports');
+  document.getElementById('header-date').textContent = new Date().toLocaleDateString('en-PH', { weekday:'short', year:'numeric', month:'short', day:'numeric'});
+  initMobileSidebar();
+  document.getElementById('logout-btn').addEventListener('click', logoutUser);
+
+  // Set default date range (last 30 days)
+  const today   = new Date();
+  const d30     = new Date(today); d30.setDate(d30.getDate() - 30);
+  document.getElementById('to-date').value   = today.toISOString().split('T')[0];
+  document.getElementById('from-date').value = d30.toISOString().split('T')[0];
+
+  let currentType = 'sales';
+  let salesChart, catChart;
+  let cachedSales = [], cachedProducts = [], cachedCategories = [];
+
+  window.setReportType = (type, btn) => {
+    currentType = type;
+    document.querySelectorAll('.report-tab').forEach(t => t.classList.remove('active'));
+    btn.classList.add('active');
+  };
+
+  async function generate() {
+    const from = document.getElementById('from-date').value;
+    const to   = document.getElementById('to-date').value;
+    const btn  = document.getElementById('generate-btn');
+    btn.disabled = true; btn.textContent = '⏳ Loading...';
+
+    document.getElementById('report-period-label').textContent = from && to
+      ? `${from} → ${to}` : 'All Time';
+
+    try {
+      [cachedSales, cachedProducts, cachedCategories] = await Promise.all([
+        getSales(from, to), getProducts(), getCategories()
+      ]);
+
+      if (currentType === 'sales') renderSalesReport();
+      else if (currentType === 'inventory') renderInventoryReport();
+      else renderProductReport();
+
+    } catch (e) {
+      console.error(e);
+    } finally {
+      btn.disabled = false; btn.textContent = '⚡ Generate';
+    }
+  }
+
+  function renderSalesReport() {
+    const sales = cachedSales;
+    const total = sales.reduce((s, x) => s + (x.total || 0), 0);
+    const avg   = sales.length ? total / sales.length : 0;
+
+    // Product sales count
+    const prodSales = {};
+    sales.forEach(s => {
+      (s.items || []).forEach(i => {
+        prodSales[i.productName] = (prodSales[i.productName] || 0) + i.quantity;
+      });
+    });
+    const best = Object.entries(prodSales).sort((a,b) => b[1] - a[1])[0];
+
+    document.getElementById('rs-1').textContent = formatPeso(total);
+    document.getElementById('rs-2').textContent = sales.length;
+    document.getElementById('rs-3').textContent = formatPeso(avg);
+    document.getElementById('rs-4').textContent = best ? best[0] : '—';
+
+    // Daily chart
+    const dayMap = {};
+    sales.forEach(s => {
+      if (!s.createdAt) return;
+      const d = s.createdAt.toDate().toISOString().split('T')[0];
+      dayMap[d] = (dayMap[d] || 0) + (s.total || 0);
+    });
+
+    const labels = Object.keys(dayMap).sort().slice(-14);
+    const data   = labels.map(l => dayMap[l]);
+
+    if (salesChart) salesChart.destroy();
+    const ctx = document.getElementById('sales-chart').getContext('2d');
+    salesChart = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [{
+          label: 'Sales (₱)',
+          data,
+          backgroundColor: 'rgba(46,125,50,0.7)',
+          borderColor:     '#2E7D32',
+          borderWidth:     2,
+          borderRadius:    6
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: { legend: { display: false } },
+        scales: { y: { beginAtZero: true, ticks: { callback: v => '₱' + v.toLocaleString() } } }
+      }
+    });
+
+    // Category pie chart
+    const catRev = {};
+    sales.forEach(s => {
+      (s.items || []).forEach(i => {
+        const prod = cachedProducts.find(p => p.id === i.productId);
+        const cat  = cachedCategories.find(c => c.id === prod?.categoryId)?.name || 'Uncategorized';
+        catRev[cat] = (catRev[cat] || 0) + (i.total || 0);
+      });
+    });
+
+    const catLabels  = Object.keys(catRev);
+    const catData    = catLabels.map(k => catRev[k]);
+    const colors     = ['#2E7D32','#4CAF50','#81C784','#A5D6A7','#C8E6C9','#00897B','#388E3C','#1B5E20'];
+
+    if (catChart) catChart.destroy();
+    const ctx2 = document.getElementById('cat-chart').getContext('2d');
+    catChart = new Chart(ctx2, {
+      type: 'doughnut',
+      data: {
+        labels: catLabels,
+        datasets: [{
+          data: catData,
+          backgroundColor: colors.slice(0, catLabels.length),
+          borderWidth: 2,
+          borderColor: '#fff'
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: { position: 'bottom', labels: { font: { size: 12 } } },
+          tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ${formatPeso(ctx.raw)}` } }
+        }
+      }
+    });
+
+    // Top products list
+    const sorted = Object.entries(prodSales).sort((a,b) => b[1]-a[1]).slice(0, 8);
+    const rankClass = ['gold','silver','bronze'];
+    document.getElementById('top-products-list').innerHTML = sorted.length === 0
+      ? `<li style="color:var(--text-light);font-size:13px">No sales data in range.</li>`
+      : sorted.map(([name, qty], i) => `
+        <li>
+          <div class="rank-badge ${rankClass[i] || ''}">${i+1}</div>
+          <div style="flex:1"><strong style="font-size:14px">${name}</strong></div>
+          <div style="font-size:13px;color:var(--text-light)">${qty} sold</div>
+        </li>`).join('');
+
+    // Detail table
+    document.getElementById('detail-table-title').textContent = 'Transaction Details';
+    document.getElementById('detail-thead').innerHTML = `<tr>
+      <th>Date</th><th>Customer</th><th>Items</th><th>Payment</th><th>Discount</th><th>Total</th>
+    </tr>`;
+    document.getElementById('detail-tbody').innerHTML = sales.length === 0
+      ? `<tr><td colspan="6" class="text-center text-muted" style="padding:30px">No transactions in selected period.</td></tr>`
+      : sales.map(s => `<tr>
+          <td style="font-size:12px">${formatDateTime(s.createdAt)}</td>
+          <td>${s.customer || 'Walk-in'}</td>
+          <td>${(s.items||[]).map(i=>`${i.productName} x${i.quantity}`).join(', ')}</td>
+          <td>${s.paymentMethod || 'Cash'}</td>
+          <td>${formatPeso(s.discount || 0)}</td>
+          <td><strong>${formatPeso(s.total || 0)}</strong></td>
+        </tr>`).join('');
+  }
+
+  function renderInventoryReport() {
+    const prods = cachedProducts;
+    const totalStock = prods.reduce((s, p) => s + (p.stock || 0), 0);
+    const totalValue = prods.reduce((s, p) => s + ((p.stock || 0) * (p.price || 0)), 0);
+    const lowCount   = prods.filter(p => (p.stock || 0) <= (p.minStock || 5)).length;
+    const outCount   = prods.filter(p => (p.stock || 0) === 0).length;
+
+    document.getElementById('rs-1').textContent = totalStock + ' units';
+    document.getElementById('rs-2').textContent = formatPeso(totalValue);
+    document.getElementById('rs-3').textContent = lowCount + ' low';
+    document.getElementById('rs-4').textContent = outCount + ' out';
+
+    document.getElementById('inv-summary-body').innerHTML = `
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div style="text-align:center;padding:16px;background:var(--success-light);border-radius:var(--radius-sm)">
+          <div style="font-size:24px;font-weight:800;color:var(--success)">${prods.filter(p=>(p.stock||0)>(p.minStock||5)).length}</div>
+          <div style="font-size:12px;color:var(--text-light)">In Stock</div>
+        </div>
+        <div style="text-align:center;padding:16px;background:var(--warning-light);border-radius:var(--radius-sm)">
+          <div style="font-size:24px;font-weight:800;color:var(--warning)">${lowCount}</div>
+          <div style="font-size:12px;color:var(--text-light)">Low Stock</div>
+        </div>
+        <div style="text-align:center;padding:16px;background:var(--danger-light);border-radius:var(--radius-sm)">
+          <div style="font-size:24px;font-weight:800;color:var(--danger)">${outCount}</div>
+          <div style="font-size:12px;color:var(--text-light)">Out of Stock</div>
+        </div>
+        <div style="text-align:center;padding:16px;background:var(--info-light);border-radius:var(--radius-sm)">
+          <div style="font-size:24px;font-weight:800;color:var(--info)">${prods.length}</div>
+          <div style="font-size:12px;color:var(--text-light)">Total Products</div>
+        </div>
+      </div>`;
+
+    document.getElementById('detail-table-title').textContent = 'Inventory Details';
+    document.getElementById('detail-thead').innerHTML = `<tr>
+      <th>Product</th><th>Category</th><th>Stock</th><th>Min Stock</th><th>Unit Price</th><th>Stock Value</th><th>Status</th>
+    </tr>`;
+    document.getElementById('detail-tbody').innerHTML = prods.length === 0
+      ? `<tr><td colspan="7" class="text-center text-muted" style="padding:30px">No products found.</td></tr>`
+      : prods.sort((a,b) => (a.stock||0) - (b.stock||0)).map(p => {
+          const cat  = cachedCategories.find(c => c.id === p.categoryId)?.name || '—';
+          const stock= p.stock || 0, min = p.minStock || 5;
+          const badge= stock===0 ? `<span class="badge badge-danger">Out of Stock</span>`
+                     : stock<=min ? `<span class="badge badge-warning">Low Stock</span>`
+                     : `<span class="badge badge-success">In Stock</span>`;
+          return `<tr>
+            <td><strong>${p.name}</strong></td>
+            <td>${cat}</td>
+            <td>${stock} ${p.unit||'pcs'}</td>
+            <td>${min}</td>
+            <td>${formatPeso(p.price||0)}</td>
+            <td>${formatPeso(stock*(p.price||0))}</td>
+            <td>${badge}</td>
+          </tr>`;
+        }).join('');
+  }
+
+  function renderProductReport() {
+    const prods = cachedProducts;
+    const sales = cachedSales;
+    const prodSales = {};
+    const prodRevenue = {};
+    sales.forEach(s => {
+      (s.items||[]).forEach(i => {
+        prodSales[i.productId]   = (prodSales[i.productId]   || 0) + i.quantity;
+        prodRevenue[i.productId] = (prodRevenue[i.productId] || 0) + (i.total || 0);
+      });
+    });
+
+    const totalRevenue = Object.values(prodRevenue).reduce((s,v) => s+v, 0);
+    const totalSold    = Object.values(prodSales).reduce((s,v) => s+v, 0);
+    const best = prods.find(p => p.id === Object.entries(prodRevenue).sort((a,b)=>b[1]-a[1])[0]?.[0]);
+
+    document.getElementById('rs-1').textContent = formatPeso(totalRevenue);
+    document.getElementById('rs-2').textContent = totalSold + ' units sold';
+    document.getElementById('rs-3').textContent = prods.length + ' products';
+    document.getElementById('rs-4').textContent = best?.name || '—';
+
+    document.getElementById('detail-table-title').textContent = 'Product Performance';
+    document.getElementById('detail-thead').innerHTML = `<tr>
+      <th>Product</th><th>Category</th><th>Price</th><th>Current Stock</th><th>Units Sold</th><th>Revenue</th>
+    </tr>`;
+    document.getElementById('detail-tbody').innerHTML = prods.length === 0
+      ? `<tr><td colspan="6" class="text-center text-muted" style="padding:30px">No products.</td></tr>`
+      : prods.map(p => {
+          const cat = cachedCategories.find(c => c.id === p.categoryId)?.name || '—';
+          return `<tr>
+            <td><strong>${p.name}</strong></td>
+            <td>${cat}</td>
+            <td>${formatPeso(p.price||0)}</td>
+            <td>${p.stock||0} ${p.unit||'pcs'}</td>
+            <td>${prodSales[p.id] || 0}</td>
+            <td><strong>${formatPeso(prodRevenue[p.id] || 0)}</strong></td>
+          </tr>`;
+        }).join('');
+  }
+
+  // Export CSV
+  document.getElementById('export-btn').addEventListener('click', () => {
+    if (cachedSales.length === 0 && cachedProducts.length === 0) {
+      alert('Please generate a report first.'); return;
+    }
+
+    let csv = '', filename = 'report.csv';
+
+    if (currentType === 'sales') {
+      filename = 'sales_report.csv';
+      csv = 'Date,Customer,Items,Payment,Discount,Total\n';
+      csv += cachedSales.map(s => {
+        const d = s.createdAt?.toDate().toLocaleDateString('en-PH') || '';
+        const items = (s.items||[]).map(i=>`${i.productName}x${i.quantity}`).join(' | ');
+        return `"${d}","${s.customer||'Walk-in'}","${items}","${s.paymentMethod||'Cash'}","${s.discount||0}","${s.total||0}"`;
+      }).join('\n');
+    } else {
+      filename = 'inventory_report.csv';
+      csv = 'Product,Category,Stock,Min Stock,Price,Value\n';
+      csv += cachedProducts.map(p => {
+        const cat = cachedCategories.find(c=>c.id===p.categoryId)?.name || '';
+        return `"${p.name}","${cat}","${p.stock||0}","${p.minStock||5}","${p.price||0}","${(p.stock||0)*(p.price||0)}"`;
+      }).join('\n');
+    }
+
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href = url; a.download = filename; a.click();
+    URL.revokeObjectURL(url);
+  });
+
+  document.getElementById('generate-btn').addEventListener('click', generate);
+
+  // Auto-generate on load
+  generate();
+</script>
+</body>
+</html>

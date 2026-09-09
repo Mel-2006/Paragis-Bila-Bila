@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard — Paragis Bila Bila</title>
+  <link rel="stylesheet" href="css/styles.css" />
+  <style>
+    .welcome-banner {
+      background: linear-gradient(135deg, #2E7D32, #388E3C);
+      border-radius: var(--radius-lg);
+      padding: 28px 32px;
+      margin-bottom: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      color: #fff;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 4px 20px rgba(46,125,50,0.25);
+    }
+    .welcome-banner::before {
+      content: '🌿';
+      position: absolute;
+      right: 24px; top: 50%;
+      transform: translateY(-50%);
+      font-size: 100px;
+      opacity: 0.12;
+    }
+    .welcome-text h2 {
+      font-family: 'Poppins', sans-serif;
+      font-size: 22px;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+    .welcome-text p { font-size: 14px; opacity: 0.85; }
+
+    .low-stock-alert {
+      background: var(--warning-light);
+      border: 1px solid #FFE082;
+      border-left: 4px solid var(--warning);
+      border-radius: var(--radius);
+      padding: 14px 20px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 20px;
+      font-size: 14px;
+      color: var(--warning);
+      font-weight: 600;
+    }
+
+    .recent-table-card { margin-top: 0; }
+    .view-all-link {
+      font-size: 13px;
+      color: var(--primary);
+      font-weight: 600;
+      text-decoration: none;
+    }
+    .view-all-link:hover { text-decoration: underline; }
+
+    .dash-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin-top: 20px;
+    }
+
+    @media (max-width: 900px) { .dash-grid { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+<div class="app-layout">
+  <div id="sidebar-mount"></div>
+
+  <div class="main-content">
+    <div id="header-mount"></div>
+
+    <main class="page-body">
+      <!-- Welcome Banner -->
+      <div class="welcome-banner">
+        <div class="welcome-text">
+          <h2 id="welcome-msg">Welcome back, Admin! 👋</h2>
+          <p id="welcome-date">Loading date...</p>
+        </div>
+      </div>
+
+      <!-- Low Stock Alert (hidden by default) -->
+      <div class="low-stock-alert" id="low-stock-alert" style="display:none">
+        ⚠️ <span id="low-stock-msg">Some products are running low on stock!</span>
+        <a href="inventory.html" style="margin-left:auto; color:var(--warning); font-weight:700; text-decoration:none;">View →</a>
+      </div>
+
+      <!-- STATS GRID -->
+      <div class="stats-grid" id="stats-grid">
+        <div class="stat-card green">
+          <div class="stat-icon green">🌿</div>
+          <div class="stat-info">
+            <div class="stat-value" id="stat-products">—</div>
+            <div class="stat-label">Total Products</div>
+            <div class="stat-change up">↑ Active items</div>
+          </div>
+        </div>
+        <div class="stat-card blue">
+          <div class="stat-icon blue">🧪</div>
+          <div class="stat-info">
+            <div class="stat-value" id="stat-stock">—</div>
+            <div class="stat-label">Available Stock</div>
+            <div class="stat-change up">↑ Units in hand</div>
+          </div>
+        </div>
+        <div class="stat-card orange">
+          <div class="stat-icon orange">⚠️</div>
+          <div class="stat-info">
+            <div class="stat-value" id="stat-low">—</div>
+            <div class="stat-label">Low Stock Items</div>
+            <div class="stat-change down">Needs restock</div>
+          </div>
+        </div>
+        <div class="stat-card green">
+          <div class="stat-icon green">💰</div>
+          <div class="stat-info">
+            <div class="stat-value" id="stat-today">—</div>
+            <div class="stat-label">Today's Sales</div>
+            <div class="stat-change up">↑ Revenue today</div>
+          </div>
+        </div>
+        <div class="stat-card teal">
+          <div class="stat-icon teal">📦</div>
+          <div class="stat-info">
+            <div class="stat-value" id="stat-value">—</div>
+            <div class="stat-label">Inventory Value</div>
+            <div class="stat-change up">Total asset value</div>
+          </div>
+        </div>
+        <div class="stat-card blue">
+          <div class="stat-icon blue">🛒</div>
+          <div class="stat-info">
+            <div class="stat-value" id="stat-total-sales">—</div>
+            <div class="stat-label">Total Orders</div>
+            <div class="stat-change up">All-time transactions</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- BOTTOM GRID: Recent Transactions + Low Stock Table -->
+      <div class="dash-grid">
+        <!-- Recent Transactions -->
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Recent Transactions</div>
+              <div class="card-subtitle">Latest sales activity</div>
+            </div>
+            <a href="sales.html" class="view-all-link">View All →</a>
+          </div>
+          <div class="table-wrapper">
+            <table class="data-table" id="recent-sales-table">
+              <thead>
+                <tr>
+                  <th>Date & Time</th>
+                  <th>Product</th>
+                  <th>Qty</th>
+                  <th>Total</th>
+                </tr>
+              </thead>
+              <tbody id="recent-sales-body">
+                <tr><td colspan="4" class="text-center text-muted" style="padding:24px">Loading...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Low Stock Products -->
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Low Stock Products</div>
+              <div class="card-subtitle">Items needing restock</div>
+            </div>
+            <a href="inventory.html" class="view-all-link">Manage →</a>
+          </div>
+          <div class="table-wrapper">
+            <table class="data-table" id="low-stock-table">
+              <thead>
+                <tr>
+                  <th>Product</th>
+                  <th>Current Stock</th>
+                  <th>Min Stock</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="low-stock-body">
+                <tr><td colspan="4" class="text-center text-muted" style="padding:24px">Loading...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<script type="module">
+  import { requireAuth, logoutUser, getDashboardStats, getSales, getProducts, formatPeso, formatDateTime, todayString, initMobileSidebar } from './js/app.js';
+  import { renderSidebar, renderHeader } from './js/sidebar.js';
+
+  requireAuth();
+
+  // Mount sidebar & header
+  document.getElementById('sidebar-mount').innerHTML = renderSidebar('dashboard');
+  document.getElementById('header-mount').innerHTML  = renderHeader('Dashboard', 'Overview of your inventory and sales');
+  document.getElementById('header-date').textContent = new Date().toLocaleDateString('en-PH', { weekday:'long', year:'numeric', month:'long', day:'numeric'});
+
+  initMobileSidebar();
+
+  document.getElementById('welcome-date').textContent = 'Today is ' + todayString();
+
+  // Logout
+  document.getElementById('logout-btn').addEventListener('click', logoutUser);
+
+  // Load stats
+  async function loadDashboard() {
+    try {
+      const [stats, products, sales] = await Promise.all([
+        getDashboardStats(),
+        getProducts(),
+        getSales()
+      ]);
+
+      document.getElementById('stat-products').textContent    = stats.totalProducts;
+      document.getElementById('stat-stock').textContent       = stats.totalStock;
+      document.getElementById('stat-low').textContent         = stats.lowStock;
+      document.getElementById('stat-today').textContent       = formatPeso(stats.todaySales);
+      document.getElementById('stat-value').textContent       = formatPeso(stats.inventoryValue);
+      document.getElementById('stat-total-sales').textContent = stats.totalSales;
+
+      // Low stock alert banner
+      if (stats.lowStock > 0) {
+        const alertEl = document.getElementById('low-stock-alert');
+        alertEl.style.display = 'flex';
+        document.getElementById('low-stock-msg').textContent =
+          `${stats.lowStock} product(s) are running low on stock. Restock soon!`;
+        document.getElementById('notif-dot').style.display = 'block';
+      }
+
+      // Recent sales table
+      const recentBody = document.getElementById('recent-sales-body');
+      const recent = sales.slice(0, 6);
+      if (recent.length === 0) {
+        recentBody.innerHTML = `<tr><td colspan="4" class="text-center text-muted" style="padding:24px">No transactions yet.</td></tr>`;
+      } else {
+        recentBody.innerHTML = recent.map(s => {
+          const item = s.items && s.items[0];
+          return `<tr>
+            <td style="font-size:12px">${formatDateTime(s.createdAt)}</td>
+            <td><strong>${item ? item.productName : '—'}</strong>${s.items && s.items.length > 1 ? `<span class="badge badge-primary" style="margin-left:6px">+${s.items.length - 1}</span>` : ''}</td>
+            <td>${item ? item.quantity : '—'}</td>
+            <td><strong style="color:var(--primary)">${formatPeso(s.total)}</strong></td>
+          </tr>`;
+        }).join('');
+      }
+
+      // Low stock table
+      const lowItems = products.filter(p => (p.stock || 0) <= (p.minStock || 5));
+      const lowBody  = document.getElementById('low-stock-body');
+      if (lowItems.length === 0) {
+        lowBody.innerHTML = `<tr><td colspan="4" class="text-center" style="padding:24px; color:var(--success)">✅ All stock levels are sufficient!</td></tr>`;
+      } else {
+        lowBody.innerHTML = lowItems.slice(0, 6).map(p => {
+          const isCritical = (p.stock || 0) === 0;
+          return `<tr>
+            <td><strong>${p.name}</strong></td>
+            <td>${p.stock || 0} ${p.unit || 'pcs'}</td>
+            <td>${p.minStock || 5} ${p.unit || 'pcs'}</td>
+            <td><span class="badge ${isCritical ? 'badge-danger' : 'badge-warning'}">${isCritical ? 'Out of Stock' : 'Low'}</span></td>
+          </tr>`;
+        }).join('');
+      }
+
+    } catch (e) {
+      console.error('Dashboard load error:', e);
+    }
+  }
+
+  loadDashboard();
+</script>
+</body>
+</html>

@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Settings — Paragis Bila Bila</title>
+  <link rel="stylesheet" href="css/styles.css" />
+  <style>
+    .settings-layout {
+      display: grid;
+      grid-template-columns: 240px 1fr;
+      gap: 24px;
+      align-items: start;
+    }
+
+    .settings-sidebar {
+      background: var(--white);
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      overflow: hidden;
+      box-shadow: var(--card-shadow);
+    }
+
+    .settings-sidebar-header {
+      padding: 20px 20px 16px;
+      border-bottom: 1px solid var(--border);
+      background: var(--primary-pale);
+    }
+
+    .settings-sidebar-header h3 {
+      font-family: 'Poppins', sans-serif;
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--primary-dark);
+    }
+
+    .settings-nav-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 13px 20px;
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text-mid);
+      cursor: pointer;
+      transition: var(--transition);
+      border-left: 3px solid transparent;
+    }
+
+    .settings-nav-item:hover { background: var(--primary-pale); color: var(--primary); }
+    .settings-nav-item.active { background: var(--primary-pale); color: var(--primary); border-left-color: var(--primary); font-weight: 700; }
+
+    .settings-panel { display: none; }
+    .settings-panel.active { display: block; }
+
+    .profile-avatar-section {
+      display: flex;
+      align-items: center;
+      gap: 24px;
+      padding: 24px;
+      background: var(--primary-pale);
+      border-radius: var(--radius);
+      border: 1px solid var(--border-green);
+      margin-bottom: 24px;
+    }
+
+    .big-avatar {
+      width: 80px; height: 80px;
+      border-radius: 50%;
+      background: var(--primary);
+      color: #fff;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 28px; font-weight: 800;
+      border: 4px solid var(--white);
+      box-shadow: 0 4px 12px rgba(46,125,50,0.25);
+      flex-shrink: 0;
+    }
+
+    .avatar-info h3 {
+      font-family: 'Poppins', sans-serif;
+      font-size: 18px; font-weight: 700;
+      color: var(--text-dark);
+      margin-bottom: 4px;
+    }
+    .avatar-info p { font-size: 13px; color: var(--text-light); }
+
+    .password-strength {
+      height: 6px;
+      border-radius: 3px;
+      background: var(--border);
+      margin-top: 6px;
+      overflow: hidden;
+    }
+
+    .password-strength-bar {
+      height: 100%;
+      border-radius: 3px;
+      transition: var(--transition);
+    }
+
+    .strength-weak   { background: var(--danger);  width: 33%; }
+    .strength-medium { background: var(--warning); width: 66%; }
+    .strength-strong { background: var(--success); width: 100%; }
+
+    .strength-label {
+      font-size: 12px; font-weight: 600;
+      margin-top: 4px;
+    }
+
+    .store-info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+
+    .about-card {
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+      border-radius: var(--radius-lg);
+      padding: 32px;
+      color: #fff;
+      text-align: center;
+    }
+
+    .about-card h2 {
+      font-family: 'Poppins', sans-serif;
+      font-size: 24px; font-weight: 800;
+      margin: 16px 0 8px;
+    }
+
+    .about-card p { font-size: 14px; opacity: 0.85; line-height: 1.6; }
+
+    .about-feature {
+      display: flex; align-items: center; gap: 10px;
+      padding: 12px 16px;
+      background: var(--white);
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      font-size: 14px;
+    }
+
+    @media (max-width: 768px) {
+      .settings-layout { grid-template-columns: 1fr; }
+      .profile-avatar-section { flex-direction: column; text-align: center; }
+      .store-info-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+<div class="app-layout">
+  <div id="sidebar-mount"></div>
+  <div class="main-content">
+    <div id="header-mount"></div>
+    <main class="page-body">
+
+      <div class="settings-layout">
+        <!-- Settings Sidebar Nav -->
+        <div class="settings-sidebar">
+          <div class="settings-sidebar-header">
+            <h3>⚙️ Settings</h3>
+          </div>
+          <div class="settings-nav-item active" onclick="showPanel('profile', this)">
+            <span>👤</span> Profile
+          </div>
+          <div class="settings-nav-item" onclick="showPanel('password', this)">
+            <span>🔐</span> Change Password
+          </div>
+          <div class="settings-nav-item" onclick="showPanel('store', this)">
+            <span>🏪</span> Store Information
+          </div>
+          <div class="settings-nav-item" onclick="showPanel('notifications', this)">
+            <span>🔔</span> Notifications
+          </div>
+          <div class="settings-nav-item" onclick="showPanel('about', this)">
+            <span>ℹ️</span> About System
+          </div>
+        </div>
+
+        <!-- Settings Panels -->
+        <div>
+          <!-- PROFILE PANEL -->
+          <div class="settings-panel active" id="panel-profile">
+            <div class="card">
+              <div class="card-header">
+                <div>
+                  <div class="card-title">Profile Settings</div>
+                  <div class="card-subtitle">Manage your account information</div>
+                </div>
+              </div>
+              <div class="card-body">
+                <div class="profile-avatar-section">
+                  <div class="big-avatar" id="profile-avatar-display">A</div>
+                  <div class="avatar-info">
+                    <h3 id="profile-display-name">Loading...</h3>
+                    <p id="profile-display-email">—</p>
+                    <p style="margin-top:4px;font-size:12px;color:var(--primary);font-weight:600">Administrator</p>
+                  </div>
+                </div>
+
+                <form id="profile-form">
+                  <div class="grid-2">
+                    <div class="form-group">
+                      <label class="form-label">Full Name <span class="required">*</span></label>
+                      <input class="form-control" type="text" id="p-fullname" placeholder="Enter your full name" />
+                    </div>
+                    <div class="form-group">
+                      <label class="form-label">Username</label>
+                      <input class="form-control" type="text" id="p-username" placeholder="Username" />
+                    </div>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Email Address</label>
+                    <input class="form-control" type="email" id="p-email" placeholder="Email" disabled style="background:#f9f9f9;cursor:not-allowed" />
+                    <small style="font-size:11px;color:var(--text-light);margin-top:4px;display:block">Email cannot be changed here. Contact support if needed.</small>
+                  </div>
+                  <div class="grid-2">
+                    <div class="form-group">
+                      <label class="form-label">Phone Number</label>
+                      <input class="form-control" type="tel" id="p-phone" placeholder="+63 912 345 6789" />
+                    </div>
+                    <div class="form-group">
+                      <label class="form-label">Role</label>
+                      <input class="form-control" type="text" value="Administrator" disabled style="background:#f9f9f9" />
+                    </div>
+                  </div>
+                </form>
+              </div>
+              <div class="modal-footer" style="border-top:1px solid var(--border)">
+                <button class="btn btn-secondary" onclick="loadProfile()">↺ Reset</button>
+                <button class="btn btn-primary" id="save-profile-btn">💾 Save Changes</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- PASSWORD PANEL -->
+          <div class="settings-panel" id="panel-password">
+            <div class="card">
+              <div class="card-header">
+                <div>
+                  <div class="card-title">Change Password</div>
+                  <div class="card-subtitle">Update your account password</div>
+                </div>
+              </div>
+              <div class="card-body">
+                <div style="max-width:440px">
+                  <div class="form-group">
+                    <label class="form-label">Current Password <span class="required">*</span></label>
+                    <div class="input-group">
+                      <input class="form-control" type="password" id="current-pass" placeholder="••••••••" style="padding-left:14px" />
+                    </div>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">New Password <span class="required">*</span></label>
+                    <input class="form-control" type="password" id="new-pass" placeholder="Minimum 8 characters" oninput="checkPasswordStrength(this.value)" />
+                    <div class="password-strength"><div class="password-strength-bar" id="strength-bar"></div></div>
+                    <div class="strength-label" id="strength-label"></div>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Confirm New Password <span class="required">*</span></label>
+                    <input class="form-control" type="password" id="confirm-pass" placeholder="Re-enter new password" />
+                  </div>
+
+                  <div style="background:var(--info-light);border-radius:var(--radius-sm);padding:14px 16px;font-size:13px;color:var(--info);margin-bottom:16px;border:1px solid #B3E5FC">
+                    <strong>Password Requirements:</strong><br>
+                    ✅ At least 8 characters<br>
+                    ✅ Mix of letters, numbers, and symbols recommended
+                  </div>
+
+                  <button class="btn btn-primary" id="change-pass-btn">🔐 Update Password</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- STORE PANEL -->
+          <div class="settings-panel" id="panel-store">
+            <div class="card">
+              <div class="card-header">
+                <div>
+                  <div class="card-title">Store Information</div>
+                  <div class="card-subtitle">Business details for receipts and reports</div>
+                </div>
+              </div>
+              <div class="card-body">
+                <form id="store-form">
+                  <div class="form-group">
+                    <label class="form-label">Store Name</label>
+                    <input class="form-control" type="text" id="s-name" value="Paragis Bila Bila" />
+                  </div>
+                  <div class="store-info-grid">
+                    <div class="form-group">
+                      <label class="form-label">Contact Number</label>
+                      <input class="form-control" type="tel" id="s-phone" placeholder="+63 912 345 6789" />
+                    </div>
+                    <div class="form-group">
+                      <label class="form-label">Email</label>
+                      <input class="form-control" type="email" id="s-email" placeholder="store@email.com" />
+                    </div>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Address</label>
+                    <textarea class="form-control" id="s-address" rows="2" placeholder="Store address"></textarea>
+                  </div>
+                  <div class="store-info-grid">
+                    <div class="form-group">
+                      <label class="form-label">City / Municipality</label>
+                      <input class="form-control" type="text" id="s-city" placeholder="City" />
+                    </div>
+                    <div class="form-group">
+                      <label class="form-label">Province</label>
+                      <input class="form-control" type="text" id="s-province" placeholder="Province" />
+                    </div>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Store Tagline</label>
+                    <input class="form-control" type="text" id="s-tagline" value="Likas na Lunas, para sa Mas Malusog na Buhay." />
+                  </div>
+                </form>
+              </div>
+              <div class="modal-footer" style="border-top:1px solid var(--border)">
+                <button class="btn btn-primary" id="save-store-btn">💾 Save Store Info</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- NOTIFICATIONS PANEL -->
+          <div class="settings-panel" id="panel-notifications">
+            <div class="card">
+              <div class="card-header">
+                <div>
+                  <div class="card-title">Notification Settings</div>
+                  <div class="card-subtitle">Manage your alert preferences</div>
+                </div>
+              </div>
+              <div class="card-body">
+                <div style="display:flex;flex-direction:column;gap:16px">
+
+                  <div style="display:flex;justify-content:space-between;align-items:center;padding:16px;border:1px solid var(--border);border-radius:var(--radius-sm)">
+                    <div>
+                      <div style="font-weight:600;font-size:14px">⚠️ Low Stock Alerts</div>
+                      <div style="font-size:13px;color:var(--text-light);margin-top:2px">Get notified when products fall below minimum stock</div>
+                    </div>
+                    <label class="toggle-switch">
+                      <input type="checkbox" id="notif-low-stock" checked />
+                      <span class="toggle-slider"></span>
+                    </label>
+                  </div>
+
+                  <div style="display:flex;justify-content:space-between;align-items:center;padding:16px;border:1px solid var(--border);border-radius:var(--radius-sm)">
+                    <div>
+                      <div style="font-weight:600;font-size:14px">📥 New Sale Notifications</div>
+                      <div style="font-size:13px;color:var(--text-light);margin-top:2px">Alert when a new sale is recorded</div>
+                    </div>
+                    <label class="toggle-switch">
+                      <input type="checkbox" id="notif-new-sale" checked />
+                      <span class="toggle-slider"></span>
+                    </label>
+                  </div>
+
+                  <div style="display:flex;justify-content:space-between;align-items:center;padding:16px;border:1px solid var(--border);border-radius:var(--radius-sm)">
+                    <div>
+                      <div style="font-weight:600;font-size:14px">📊 Daily Summary Report</div>
+                      <div style="font-size:13px;color:var(--text-light);margin-top:2px">Receive daily sales summary</div>
+                    </div>
+                    <label class="toggle-switch">
+                      <input type="checkbox" id="notif-daily" />
+                      <span class="toggle-slider"></span>
+                    </label>
+                  </div>
+
+                  <div class="form-group">
+                    <label class="form-label">Minimum Stock Alert Level</label>
+                    <input class="form-control" type="number" id="min-stock-level" value="5" min="1" style="max-width:160px" />
+                    <small style="font-size:12px;color:var(--text-light);display:block;margin-top:4px">Alert when stock drops to or below this number</small>
+                  </div>
+
+                  <button class="btn btn-primary" style="align-self:flex-start" id="save-notif-btn">💾 Save Notification Settings</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ABOUT PANEL -->
+          <div class="settings-panel" id="panel-about">
+            <div class="about-card mb-20">
+              <div style="font-size:60px">🌿</div>
+              <h2>Paragis Bila Bila</h2>
+              <p>Web-Based Inventory Management System<br>Natural Herbal Medicine from the Philippines</p>
+              <p style="margin-top:12px;font-size:12px;opacity:0.7">Version 1.0.0 &nbsp;•&nbsp; Built with Firebase</p>
+            </div>
+
+            <div class="card mb-20">
+              <div class="card-header">
+                <div class="card-title">System Features</div>
+              </div>
+              <div class="card-body">
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+                  <div class="about-feature"><span>📦</span> Product Management</div>
+                  <div class="about-feature"><span>🗂️</span> Inventory Tracking</div>
+                  <div class="about-feature"><span>🛒</span> Sales & Transactions</div>
+                  <div class="about-feature"><span>🏷️</span> Category Management</div>
+                  <div class="about-feature"><span>📊</span> Reports & Analytics</div>
+                  <div class="about-feature"><span>⚙️</span> Settings & Profile</div>
+                  <div class="about-feature"><span>📱</span> Mobile Responsive</div>
+                  <div class="about-feature"><span>🔒</span> Secure Authentication</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card-header"><div class="card-title">Technology Stack</div></div>
+              <div class="card-body">
+                <div style="display:flex;flex-direction:column;gap:10px;font-size:14px">
+                  <div style="display:flex;justify-content:space-between"><span style="color:var(--text-light)">Frontend</span><strong>HTML5, CSS3, JavaScript (ES Modules)</strong></div>
+                  <div style="display:flex;justify-content:space-between"><span style="color:var(--text-light)">Database</span><strong>Firebase Firestore</strong></div>
+                  <div style="display:flex;justify-content:space-between"><span style="color:var(--text-light)">Authentication</span><strong>Firebase Auth</strong></div>
+                  <div style="display:flex;justify-content:space-between"><span style="color:var(--text-light)">Storage</span><strong>Firebase Storage</strong></div>
+                  <div style="display:flex;justify-content:space-between"><span style="color:var(--text-light)">Charts</span><strong>Chart.js 4.4</strong></div>
+                  <div style="display:flex;justify-content:space-between"><span style="color:var(--text-light)">Fonts</span><strong>Google Fonts (Inter, Poppins)</strong></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- Toggle Switch CSS -->
+<style>
+  .toggle-switch { position:relative; width:48px; height:26px; flex-shrink:0; }
+  .toggle-switch input { opacity:0; width:0; height:0; }
+  .toggle-slider {
+    position:absolute; cursor:pointer; inset:0;
+    background:#ccc; border-radius:26px; transition:var(--transition);
+  }
+  .toggle-slider::before {
+    content:''; position:absolute;
+    width:20px; height:20px; left:3px; bottom:3px;
+    background:#fff; border-radius:50%; transition:var(--transition);
+    box-shadow:0 1px 4px rgba(0,0,0,0.2);
+  }
+  .toggle-switch input:checked + .toggle-slider { background:var(--primary); }
+  .toggle-switch input:checked + .toggle-slider::before { transform:translateX(22px); }
+</style>
+
+<script type="module">
+  import { requireAuth, logoutUser, getProfile, updateProfile, changePassword, showToast, initMobileSidebar } from './js/app.js';
+  import { renderSidebar, renderHeader } from './js/sidebar.js';
+  import { db } from './js/firebase-config.js';
+  import { doc, getDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+  requireAuth();
+  document.getElementById('sidebar-mount').innerHTML = renderSidebar('settings');
+  document.getElementById('header-mount').innerHTML  = renderHeader('Settings', 'Manage your account and system settings');
+  document.getElementById('header-date').textContent = new Date().toLocaleDateString('en-PH', { weekday:'short', year:'numeric', month:'short', day:'numeric'});
+  initMobileSidebar();
+  document.getElementById('logout-btn').addEventListener('click', logoutUser);
+
+  // Panel navigation
+  window.showPanel = (panel, el) => {
+    document.querySelectorAll('.settings-panel').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.settings-nav-item').forEach(n => n.classList.remove('active'));
+    document.getElementById(`panel-${panel}`).classList.add('active');
+    el.classList.add('active');
+  };
+
+  // Load profile
+  async function loadProfile() {
+    try {
+      const profile = await getProfile();
+      if (!profile) return;
+      const initials = (profile.fullName || profile.email || 'A').charAt(0).toUpperCase();
+      document.getElementById('profile-avatar-display').textContent = initials;
+      document.getElementById('sb-avatar').textContent   = initials;
+      document.getElementById('hdr-avatar').textContent  = initials;
+      document.getElementById('sb-username').textContent = profile.fullName || profile.email?.split('@')[0] || 'Admin';
+      document.getElementById('hdr-username').textContent = profile.fullName || 'Admin';
+
+      document.getElementById('profile-display-name').textContent  = profile.fullName || 'Admin';
+      document.getElementById('profile-display-email').textContent = profile.email || '—';
+      document.getElementById('p-fullname').value = profile.fullName || '';
+      document.getElementById('p-username').value = profile.username || '';
+      document.getElementById('p-email').value    = profile.email || '';
+      document.getElementById('p-phone').value    = profile.phone || '';
+    } catch (e) { console.error(e); }
+  }
+
+  window.loadProfile = loadProfile;
+
+  // Save profile
+  document.getElementById('save-profile-btn').addEventListener('click', async () => {
+    const fullName = document.getElementById('p-fullname').value.trim();
+    const username = document.getElementById('p-username').value.trim();
+    const phone    = document.getElementById('p-phone').value.trim();
+    if (!fullName) { showToast('Full name is required.', 'error'); return; }
+
+    const btn = document.getElementById('save-profile-btn');
+    btn.disabled = true; btn.textContent = 'Saving...';
+    try {
+      await updateProfile({ fullName, username, phone });
+      showToast('Profile updated successfully!', 'success');
+      await loadProfile();
+    } catch (e) {
+      showToast('Error: ' + e.message, 'error');
+    } finally {
+      btn.disabled = false; btn.innerHTML = '💾 Save Changes';
+    }
+  });
+
+  // Password strength checker
+  window.checkPasswordStrength = val => {
+    const bar   = document.getElementById('strength-bar');
+    const label = document.getElementById('strength-label');
+    if (!val) { bar.className = 'password-strength-bar'; label.textContent = ''; return; }
+    const hasUpper   = /[A-Z]/.test(val);
+    const hasLower   = /[a-z]/.test(val);
+    const hasNumber  = /[0-9]/.test(val);
+    const hasSpecial = /[^A-Za-z0-9]/.test(val);
+    const score = [val.length >= 8, hasUpper, hasLower, hasNumber, hasSpecial].filter(Boolean).length;
+
+    if (score <= 2) {
+      bar.className = 'password-strength-bar strength-weak';
+      label.textContent = '🔴 Weak'; label.style.color = 'var(--danger)';
+    } else if (score <= 3) {
+      bar.className = 'password-strength-bar strength-medium';
+      label.textContent = '🟡 Medium'; label.style.color = 'var(--warning)';
+    } else {
+      bar.className = 'password-strength-bar strength-strong';
+      label.textContent = '🟢 Strong'; label.style.color = 'var(--success)';
+    }
+  };
+
+  // Change password
+  document.getElementById('change-pass-btn').addEventListener('click', async () => {
+    const curr    = document.getElementById('current-pass').value;
+    const newPass = document.getElementById('new-pass').value;
+    const confirm = document.getElementById('confirm-pass').value;
+
+    if (!curr || !newPass || !confirm) { showToast('Please fill in all fields.', 'error'); return; }
+    if (newPass.length < 8)           { showToast('Password must be at least 8 characters.', 'error'); return; }
+    if (newPass !== confirm)           { showToast('Passwords do not match.', 'error'); return; }
+
+    const btn = document.getElementById('change-pass-btn');
+    btn.disabled = true; btn.textContent = 'Updating...';
+    try {
+      await changePassword(curr, newPass);
+      showToast('Password changed successfully!', 'success');
+      document.getElementById('current-pass').value = '';
+      document.getElementById('new-pass').value     = '';
+      document.getElementById('confirm-pass').value = '';
+      document.getElementById('strength-bar').className = 'password-strength-bar';
+      document.getElementById('strength-label').textContent = '';
+    } catch (e) {
+      const msg = e.code === 'auth/wrong-password' ? 'Current password is incorrect.' : e.message;
+      showToast(msg, 'error');
+    } finally {
+      btn.disabled = false; btn.innerHTML = '🔐 Update Password';
+    }
+  });
+
+  // Store info - load/save
+  async function loadStoreInfo() {
+    try {
+      const snap = await getDoc(doc(db, 'settings', 'store'));
+      if (snap.exists()) {
+        const d = snap.data();
+        document.getElementById('s-name').value     = d.name     || 'Paragis Bila Bila';
+        document.getElementById('s-phone').value    = d.phone    || '';
+        document.getElementById('s-email').value    = d.email    || '';
+        document.getElementById('s-address').value  = d.address  || '';
+        document.getElementById('s-city').value     = d.city     || '';
+        document.getElementById('s-province').value = d.province || '';
+        document.getElementById('s-tagline').value  = d.tagline  || 'Likas na Lunas, para sa Mas Malusog na Buhay.';
+      }
+    } catch (e) { console.error(e); }
+  }
+
+  document.getElementById('save-store-btn').addEventListener('click', async () => {
+    const data = {
+      name:     document.getElementById('s-name').value.trim(),
+      phone:    document.getElementById('s-phone').value.trim(),
+      email:    document.getElementById('s-email').value.trim(),
+      address:  document.getElementById('s-address').value.trim(),
+      city:     document.getElementById('s-city').value.trim(),
+      province: document.getElementById('s-province').value.trim(),
+      tagline:  document.getElementById('s-tagline').value.trim(),
+      updatedAt: serverTimestamp()
+    };
+    const btn = document.getElementById('save-store-btn');
+    btn.disabled = true; btn.textContent = 'Saving...';
+    try {
+      await setDoc(doc(db, 'settings', 'store'), data, { merge: true });
+      showToast('Store information saved!', 'success');
+    } catch (e) {
+      showToast('Error: ' + e.message, 'error');
+    } finally {
+      btn.disabled = false; btn.innerHTML = '💾 Save Store Info';
+    }
+  });
+
+  // Notification settings
+  async function loadNotifSettings() {
+    try {
+      const snap = await getDoc(doc(db, 'settings', 'notifications'));
+      if (snap.exists()) {
+        const d = snap.data();
+        document.getElementById('notif-low-stock').checked = d.lowStock !== false;
+        document.getElementById('notif-new-sale').checked  = d.newSale  !== false;
+        document.getElementById('notif-daily').checked     = d.daily    === true;
+        document.getElementById('min-stock-level').value   = d.minStockLevel || 5;
+      }
+    } catch (e) { console.error(e); }
+  }
+
+  document.getElementById('save-notif-btn').addEventListener('click', async () => {
+    const data = {
+      lowStock:      document.getElementById('notif-low-stock').checked,
+      newSale:       document.getElementById('notif-new-sale').checked,
+      daily:         document.getElementById('notif-daily').checked,
+      minStockLevel: parseInt(document.getElementById('min-stock-level').value) || 5,
+      updatedAt:     serverTimestamp()
+    };
+    const btn = document.getElementById('save-notif-btn');
+    btn.disabled = true; btn.textContent = 'Saving...';
+    try {
+      await setDoc(doc(db, 'settings', 'notifications'), data, { merge: true });
+      showToast('Notification settings saved!', 'success');
+    } catch (e) {
+      showToast('Error: ' + e.message, 'error');
+    } finally {
+      btn.disabled = false; btn.innerHTML = '💾 Save Notification Settings';
+    }
+  });
+
+  // Init
+  loadProfile();
+  loadStoreInfo();
+  loadNotifSettings();
+</script>
+</body>
+</html>
