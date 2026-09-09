@@ -8,6 +8,7 @@ import {
   signOut,
   onAuthStateChanged,
   updatePassword,
+  sendPasswordResetEmail,
   EmailAuthProvider,
   reauthenticateWithCredential
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
@@ -44,6 +45,11 @@ export async function loginUser(email, password) {
 export async function logoutUser() {
   await signOut(auth);
   window.location.href = 'index.html';
+}
+
+// ── FORGOT PASSWORD ────────────────────────────────────────
+export async function resetPassword(email) {
+  return sendPasswordResetEmail(auth, email);
 }
 
 // ── CURRENT USER ───────────────────────────────────────────
@@ -177,8 +183,16 @@ export function initMobileSidebar() {
 
 // ── FIREBASE: PRODUCTS ─────────────────────────────────────
 export async function getProducts() {
-  const snap = await getDocs(query(collection(db, 'products'), orderBy('createdAt', 'desc')));
-  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  try {
+    // Try with orderBy first (requires Firestore index)
+    const snap = await getDocs(query(collection(db, 'products'), orderBy('createdAt', 'desc')));
+    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  } catch (err) {
+    // Fallback: fetch without ordering (works even without index)
+    console.warn('getProducts: orderBy failed, falling back to unordered fetch.', err.message);
+    const snap = await getDocs(collection(db, 'products'));
+    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  }
 }
 
 export async function addProduct(data) {
@@ -221,11 +235,20 @@ export async function addStockMovement(data) {
 }
 
 export async function getStockMovements(productId = null) {
-  let q = productId
-    ? query(collection(db, 'stock_movements'), where('productId', '==', productId), orderBy('createdAt', 'desc'))
-    : query(collection(db, 'stock_movements'), orderBy('createdAt', 'desc'));
-  const snap = await getDocs(q);
-  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  try {
+    let q = productId
+      ? query(collection(db, 'stock_movements'), where('productId', '==', productId), orderBy('createdAt', 'desc'))
+      : query(collection(db, 'stock_movements'), orderBy('createdAt', 'desc'));
+    const snap = await getDocs(q);
+    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  } catch (err) {
+    console.warn('getStockMovements: orderBy failed, falling back.', err.message);
+    let q = productId
+      ? query(collection(db, 'stock_movements'), where('productId', '==', productId))
+      : collection(db, 'stock_movements');
+    const snap = await getDocs(q);
+    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  }
 }
 
 // ── FIREBASE: SALES ────────────────────────────────────────
@@ -244,17 +267,23 @@ export async function addSale(data) {
 }
 
 export async function getSales(startDate = null, endDate = null) {
-  let q;
-  if (startDate && endDate) {
-    q = query(collection(db, 'sales'),
-      where('createdAt', '>=', Timestamp.fromDate(new Date(startDate))),
-      where('createdAt', '<=', Timestamp.fromDate(new Date(endDate + 'T23:59:59'))),
-      orderBy('createdAt', 'desc'));
-  } else {
-    q = query(collection(db, 'sales'), orderBy('createdAt', 'desc'));
+  try {
+    let q;
+    if (startDate && endDate) {
+      q = query(collection(db, 'sales'),
+        where('createdAt', '>=', Timestamp.fromDate(new Date(startDate))),
+        where('createdAt', '<=', Timestamp.fromDate(new Date(endDate + 'T23:59:59'))),
+        orderBy('createdAt', 'desc'));
+    } else {
+      q = query(collection(db, 'sales'), orderBy('createdAt', 'desc'));
+    }
+    const snap = await getDocs(q);
+    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  } catch (err) {
+    console.warn('getSales: orderBy failed, falling back.', err.message);
+    const snap = await getDocs(collection(db, 'sales'));
+    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
   }
-  const snap = await getDocs(q);
-  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
 }
 
 // ── FIREBASE: DASHBOARD STATS ──────────────────────────────
